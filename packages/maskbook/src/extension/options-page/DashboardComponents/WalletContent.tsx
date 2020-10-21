@@ -26,6 +26,7 @@ import { ProviderType, TokenDetailed } from '../../../web3/types'
 import { WalletAssetsTable } from './WalletAssetsTable'
 import { useRemoteControlledDialog } from '../../../utils/hooks/useRemoteControlledDialog'
 import { TransakMessageCenter } from '../../../plugins/Transak/messages'
+import { Multicall } from '../../../web3/UI/Mutlicall'
 
 const walletContentTheme = (theme: Theme): Theme =>
     merge(cloneDeep(theme), {
@@ -185,6 +186,7 @@ export const WalletContent = React.forwardRef<HTMLDivElement, WalletContentProps
                             variant="text">
                             {t('activity')}
                         </Button>
+                        <Multicall />
                     </Box>
                 ) : null}
             </ThemeProvider>
