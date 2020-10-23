@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
     makeStyles,
     createStyles,
@@ -33,12 +33,13 @@ import ActionButton from '../../../extension/options-page/DashboardComponents/Ac
 import { useDonateCallback } from '../hooks/useDonateCallback'
 import { useTokenApproveCallback, ApproveState } from '../../../web3/hooks/useTokenApproveCallback'
 import { GITCOIN_CONSTANT } from '../constants'
-import { TransactionDialog } from '../../../web3/UI/TransactionDialog'
 import { SelectERC20TokenDialog } from '../../../web3/UI/SelectERC20TokenDialog'
 import { TokenAmountPanel } from '../../../web3/UI/TokenAmountPanel'
 import { formatBalance } from '../../Wallet/formatter'
 import { TransactionStateType } from '../../../web3/hooks/useTransactionState'
 import type { ERC20TokenRecord } from '../../Wallet/database/types'
+import { WalletMessageCenter } from '../../Wallet/messages'
+import { useRemoteControlledDialog } from '../../../utils/hooks/useRemoteControlledDialog'
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
@@ -137,17 +138,62 @@ function DonateDialogUI(props: DonateDialogUIProps) {
     //#endregion
 
     //#region blocking
-    const [donateState, donateCallback] = useDonateCallback(address ?? '', amount, token)
-    const [openTransactionDialog, setOpenTransactionDialog] = useState(false)
-    const onSubmit = useCallback(async () => {
-        setOpenTransactionDialog(true)
-        await donateCallback()
-    }, [donateCallback])
-    const onTransactionDialogClose = useCallback(() => {
-        setOpenTransactionDialog(false)
-        if (donateState.type !== TransactionStateType.HASH) return
-        setAmount('0')
-    }, [donateState])
+    const [donateState, donateCallback, resetDonateCallback] = useDonateCallback(address ?? '', amount, token)
+    //#endregion
+
+    //#region remote controlled tx dialog
+    const shareLink = useMemo(() => {
+        switch (getActivatedUI()?.networkIdentifier) {
+            case 'twitter.com':
+                return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    [
+                        `I just donated ${title} with ${formatBalance(
+                            new BigNumber(amount),
+                            token.decimals,
+                            token.decimals,
+                        )} ${token.symbol}. Follow @realMaskbook (mask.io) to donate Gitcoin grants on Twitter.`,
+                        '#Maskbook',
+                    ].join('\n'),
+                )}`
+            case 'facebook.com':
+                return `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(
+                    [
+                        `I just donated ${title} with ${formatBalance(
+                            new BigNumber(amount),
+                            token.decimals,
+                            token.decimals,
+                        )} ${token.symbol}. Follow @realMaskbook (mask.io) to donate Gitcoin grants on Facebook.`,
+                        '#Maskbook',
+                    ].join('\n'),
+                )}&u=mask.io`
+            default:
+                return ''
+        }
+    }, [amount, token, title])
+
+    // close the transaction dialog
+    const [_, setTransactionDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'transactionDialogUpdated',
+        (ev) => {
+            if (ev.open) return
+            setAmount('0')
+            resetDonateCallback()
+        },
+    )
+
+    // open the transaction dialog
+    useEffect(() => {
+        if (donateState.type === TransactionStateType.UNKNOWN) return
+        setTransactionDialogOpen({
+            open: true,
+            shareLink,
+            state: donateState,
+            summary: `Donating ${formatBalance(new BigNumber(amount), token.decimals, token.decimals)} ${
+                token.symbol
+            } for ${title}`,
+        })
+    }, [shareLink, donateState])
     //#endregion
 
     //#region submit button
@@ -235,7 +281,7 @@ function DonateDialogUI(props: DonateDialogUIProps) {
                             variant="contained"
                             size="large"
                             disabled={Boolean(validationMessage)}
-                            onClick={onSubmit}>
+                            onClick={donateCallback}>
                             {validationMessage || 'Donate'}
                         </ActionButton>
                     )}
@@ -246,14 +292,6 @@ function DonateDialogUI(props: DonateDialogUIProps) {
                 excludeTokens={[token.address]}
                 onSubmit={onSelectERC20TokenDialogSubmit}
                 onClose={onSelectERC20TokenDialogClose}
-            />
-            <TransactionDialog
-                state={donateState}
-                summary={`Donating ${formatBalance(new BigNumber(amount), token.decimals)} ${
-                    token.symbol
-                } for ${title}`}
-                open={openTransactionDialog}
-                onClose={onTransactionDialogClose}
             />
         </div>
     )

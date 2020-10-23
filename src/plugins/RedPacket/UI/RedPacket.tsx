@@ -122,10 +122,7 @@ export function RedPacket(props: RedPacketProps) {
     const { canFetch, canClaim, canRefund, listOfStatus } = availabilityComputed
 
     //#region remote controll select provider dialog
-    const [, setOpen] = useRemoteControlledDialog<MaskbookWalletMessages, 'selectProviderDialogUpdated'>(
-        WalletMessageCenter,
-        'selectProviderDialogUpdated',
-    )
+    const [, setOpen] = useRemoteControlledDialog(WalletMessageCenter, 'selectProviderDialogUpdated')
     const onConnect = useCallback(() => {
         setOpen({
             open: true,
@@ -253,7 +250,7 @@ export function RedPacket(props: RedPacketProps) {
                 />
             </Card>
 
-            {canClaim || canRefund ? (
+            {/* {canClaim || canRefund ? (
                 <TransactionDialog
                     state={canClaim ? claimState : refundState}
                     summary={
@@ -268,7 +265,7 @@ export function RedPacket(props: RedPacketProps) {
                     open={openTransactionDialog}
                     onClose={onTransactionDialogClose}
                 />
-            ) : null}
+            ) : null} */}
         </>
     )
 }

@@ -1,4 +1,5 @@
 import React from 'react'
+import { TransactionDialog } from '../../web3/UI/TransactionDialog'
 import type { PluginConfig } from '../plugin'
 import { PLUGIN_IDENTIFIER } from './constants'
 import { SelectProviderDialog } from './UI/SelectProviderDialog'
@@ -11,6 +12,7 @@ export const WalletPluginDefine: PluginConfig = {
     pageInspector() {
         return (
             <>
+                <TransactionDialog />
                 <SelectWalletDialog />
                 <SelectProviderDialog />
                 <WalletConnectQRCodeDialog />
@@ -20,6 +22,7 @@ export const WalletPluginDefine: PluginConfig = {
     dashboardInspector() {
         return (
             <>
+                <TransactionDialog />
                 <SelectWalletDialog />
                 <SelectProviderDialog />
                 <WalletConnectQRCodeDialog />

@@ -304,7 +304,7 @@ export function RedPacketForm(props: RedPacketFormProps) {
                 onSubmit={onSelectERC20TokenDialogSubmit}
                 onClose={onSelectERC20TokenDialogClose}
             />
-            <TransactionDialog
+            {/* <TransactionDialog
                 state={createState}
                 summary={`Creating red packet with ${formatBalance(
                     new BigNumber(totalAmount),
@@ -313,7 +313,7 @@ export function RedPacketForm(props: RedPacketFormProps) {
                 )} ${token.symbol}`}
                 open={openTransactionDialog}
                 onClose={onTransactionDialogClose}
-            />
+            /> */}
         </>
     )
 }

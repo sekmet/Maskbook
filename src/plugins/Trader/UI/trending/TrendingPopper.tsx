@@ -22,26 +22,14 @@ export function TrendingPopper(props: TrendingPopperProps) {
 
     //#region select token and provider dialog could be open by trending view
     const onFreezed = useCallback((ev) => setFreezed(ev.open), [])
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectERC20TokenDialogUpdated'>(
-        MessageCenterWallet,
-        'selectERC20TokenDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectProviderDialogUpdated'>(
-        MessageCenterWallet,
-        'selectProviderDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectWalletDialogUpdated'>(
-        MessageCenterWallet,
-        'selectWalletDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'walletConnectQRCodeDialogUpdated'>(
-        MessageCenterWallet,
-        'walletConnectQRCodeDialogUpdated',
-        onFreezed,
-    )
+    // useRemoteControlledDialog(
+    //     MessageCenterWallet,
+    //     'selectERC20TokenDialogUpdated',
+    //     onFreezed,
+    // )
+    useRemoteControlledDialog(MessageCenterWallet, 'selectProviderDialogUpdated', onFreezed)
+    useRemoteControlledDialog(MessageCenterWallet, 'selectWalletDialogUpdated', onFreezed)
+    useRemoteControlledDialog(MessageCenterWallet, 'walletConnectQRCodeDialogUpdated', onFreezed)
     //#endregion
 
     //#region open or close popper

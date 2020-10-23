@@ -98,12 +98,7 @@ function PopupUI() {
         }
     }, [])
 
-    const [, setOpen] = useRemoteControlledDialog<MaskbookWalletMessages, 'selectProviderDialogUpdated'>(
-        WalletMessageCenter,
-        'selectProviderDialogUpdated',
-        noop,
-        'activated',
-    )
+    const [, setOpen] = useRemoteControlledDialog(WalletMessageCenter, 'selectProviderDialogUpdated', noop, 'activated')
     const onConnect = useCallback(async () => {
         setOpen({
             open: true,

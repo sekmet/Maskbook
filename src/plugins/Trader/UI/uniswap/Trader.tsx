@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { makeStyles, Theme, createStyles, CircularProgress } from '@material-ui/core'
 import BigNumber from 'bignumber.js'
 import { useStylesExtends } from '../../../../components/custom-ui-helper'
@@ -17,11 +17,13 @@ import { useSwapState, SwapActionType } from '../../uniswap/useSwapState'
 import { TradeStrategy, TokenPanelType } from '../../types'
 import { CONSTANTS } from '../../../../web3/constants'
 import { TRADE_CONSTANTS } from '../../constants'
-import { TransactionDialog } from '../../../../web3/UI/TransactionDialog'
 import { sleep } from '../../../../utils/utils'
 import { EthereumStatusBar } from '../../../../web3/UI/EthereumStatusBar'
 import { TransactionStateType } from '../../../../web3/hooks/useTransactionState'
 import { SelectERC20TokenDialog } from '../../../../web3/UI/SelectERC20TokenDialog'
+import { useRemoteControlledDialog } from '../../../../utils/hooks/useRemoteControlledDialog'
+import { WalletMessageCenter } from '../../../Wallet/messages'
+import { getActivatedUI } from '../../../../social-network/ui'
 
 const useStyles = makeStyles((theme: Theme) => {
     return createStyles({
@@ -175,34 +177,73 @@ export function Trader(props: TraderProps) {
     }, [approveState])
     //#endregion
 
-    //#region swap
-    const [swapState, swapCallback] = useSwapCallback(trade.v2Trade)
+    //#region blocking (swap)
+    const [swapState, swapCallback, resetSwapCallback] = useSwapCallback(trade.v2Trade)
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
-    const [openTransactionDialog, setOpenTransactionDialog] = useState(false)
     const onConfirmDialogConfirm = useCallback(async () => {
         setOpenConfirmDialog(false)
         await sleep(100)
         setFreezed(true)
-        setOpenTransactionDialog(true)
         await swapCallback()
-    }, [swapCallback, setOpenConfirmDialog, setOpenTransactionDialog])
+    }, [swapCallback])
     const onConfirmDialogClose = useCallback(() => {
         setOpenConfirmDialog(false)
     }, [])
-    const onTransactionDialogClose = useCallback(() => {
-        setFreezed(false)
-        setOpenTransactionDialog(false)
-        if (swapState.type !== TransactionStateType.HASH) return
-        // clean the form
-        dispatchSwapStore({
-            type: SwapActionType.UPDATE_INPUT_AMOUNT,
-            amount: '0',
+    //#endregion
+
+    //#region remote controlled transaction dialog
+    const shareLink = useMemo(() => {
+        if (!trade.v2Trade) return ''
+        switch (getActivatedUI()?.networkIdentifier) {
+            case 'twitter.com':
+                return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    [
+                        `I just swapped ${trade.v2Trade.inputAmount.toSignificant(6)} ${
+                            trade.v2Trade.inputAmount.currency.symbol
+                        } for ${trade.v2Trade.outputAmount.toSignificant(6)} ${
+                            trade.v2Trade.outputAmount.currency.symbol
+                        }. Follow @realMaskbook (mask.io) to swap cryptocurrencies on Twitter.`,
+                        '#Maskbook',
+                    ].join('\n'),
+                )}`
+            default:
+                return ''
+        }
+    }, [trade.v2Trade])
+
+    // close the transaction dialog
+    const [_, setTransactionDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'transactionDialogUpdated',
+        (ev) => {
+            if (ev.open) return
+            setFreezed(false)
+            dispatchSwapStore({
+                type: SwapActionType.UPDATE_INPUT_AMOUNT,
+                amount: '0',
+            })
+            dispatchSwapStore({
+                type: SwapActionType.UPDATE_OUTPUT_AMOUNT,
+                amount: '0',
+            })
+            resetSwapCallback()
+        },
+    )
+
+    // open the transaction dialog
+    useEffect(() => {
+        if (swapState.type === TransactionStateType.UNKNOWN) return
+        setTransactionDialogOpen({
+            open: true,
+            shareLink,
+            state: swapState,
+            summary: trade.v2Trade
+                ? `Swapping ${trade.v2Trade.inputAmount.toSignificant(6)} ${
+                      trade.v2Trade.inputAmount.currency.symbol
+                  } for ${trade.v2Trade.outputAmount.toSignificant(6)} ${trade.v2Trade.outputAmount.currency.symbol}`
+                : '',
         })
-        dispatchSwapStore({
-            type: SwapActionType.UPDATE_OUTPUT_AMOUNT,
-            amount: '0',
-        })
-    }, [swapState])
+    }, [swapState, trade.v2Trade])
     //#endregion
 
     return (
@@ -237,14 +278,6 @@ export function Trader(props: TraderProps) {
                 open={openConfirmDialog}
                 onConfirm={onConfirmDialogConfirm}
                 onClose={onConfirmDialogClose}
-            />
-            <TransactionDialog
-                state={swapState}
-                summary={`Swapping ${trade.v2Trade?.inputAmount.toSignificant(6)} ${
-                    trade.v2Trade?.inputAmount.currency.symbol
-                } for ${trade.v2Trade?.outputAmount.toSignificant(6)} ${trade.v2Trade?.outputAmount.currency.symbol}`}
-                open={openTransactionDialog}
-                onClose={onTransactionDialogClose}
             />
             <SelectERC20TokenDialog
                 open={openSelectERC20TokenDialog}

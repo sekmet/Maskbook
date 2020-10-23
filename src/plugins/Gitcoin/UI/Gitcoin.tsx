@@ -30,10 +30,10 @@ export function Gitcoin(props: GitcoinProps) {
     //#region the donate dialog
     const account = useAccount()
     const [open, setOpen] = useState(false)
-    const [, setSelectProviderDialogOpen] = useRemoteControlledDialog<
-        MaskbookWalletMessages,
-        'selectProviderDialogUpdated'
-    >(WalletMessageCenter, 'selectProviderDialogUpdated')
+    const [, setSelectProviderDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'selectProviderDialogUpdated',
+    )
     const onRequest = useCallback(() => {
         if (account) {
             setOpen(true)

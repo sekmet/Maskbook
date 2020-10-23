@@ -62,10 +62,10 @@ function SelectWalletDialogUI(props: SelectWalletDialogUIProps) {
     const defaultWallet = useDefaultWallet()
 
     //#region remote controlled dialog logic
-    const [open, setSelectWalletDialogOpen] = useRemoteControlledDialog<
-        MaskbookWalletMessages,
-        'selectWalletDialogUpdated'
-    >(WalletMessageCenter, 'selectWalletDialogUpdated')
+    const [open, setSelectWalletDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'selectWalletDialogUpdated',
+    )
     const onClose = useCallback(() => {
         setSelectWalletDialogOpen({
             open: false,
@@ -89,10 +89,10 @@ function SelectWalletDialogUI(props: SelectWalletDialogUIProps) {
     //#endregion
 
     //#region connect wallet
-    const [, setSelectProviderDialogOpen] = useRemoteControlledDialog<
-        MaskbookWalletMessages,
-        'selectProviderDialogUpdated'
-    >(WalletMessageCenter, 'selectProviderDialogUpdated')
+    const [, setSelectProviderDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'selectProviderDialogUpdated',
+    )
     const onConnect = useCallback(async () => {
         onClose()
         await sleep(100)
