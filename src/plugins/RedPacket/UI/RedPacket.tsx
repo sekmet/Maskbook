@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { makeStyles, createStyles, Card, Typography } from '@material-ui/core'
 import { Skeleton } from '@material-ui/lab'
 import classNames from 'classnames'
@@ -17,6 +17,8 @@ import { MaskbookWalletMessages, WalletMessageCenter } from '../../Wallet/messag
 import { useTokenComputed } from '../hooks/useTokenComputed'
 import { useAvailabilityComputed } from '../hooks/useAvailabilityComputed'
 import { formatBalance } from '../../Wallet/formatter'
+import { TransactionStateType } from '../../../web3/hooks/useTransactionState'
+import { getActivatedUI } from '../../../social-network/ui'
 
 const useStyles = makeStyles((theme) =>
     createStyles({
@@ -121,7 +123,7 @@ export function RedPacket(props: RedPacketProps) {
 
     const { canFetch, canClaim, canRefund, listOfStatus } = availabilityComputed
 
-    //#region remote controll select provider dialog
+    //#region remote controlled select provider dialog
     const [, setOpen] = useRemoteControlledDialog(WalletMessageCenter, 'selectProviderDialogUpdated')
     const onConnect = useCallback(() => {
         setOpen({
@@ -130,21 +132,67 @@ export function RedPacket(props: RedPacketProps) {
     }, [setOpen])
     //#endregion
 
-    //#region blocking
-    const [openTransactionDialog, setOpenTransactionDialog] = useState(false)
-    const [claimState, claimCallback] = useClaimCallback(from, payload.rpid, payload.password)
-    const [refundState, refundCallback] = useRefundCallback(from, payload.rpid)
+    //#region remote controlled transaction dialog
+    const shareLink = useMemo(() => {
+        if (canClaim) {
+            switch (getActivatedUI()?.networkIdentifier) {
+                case 'twitter.com':
+                    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                        [
+                            `I just claimed a red packet from ${payload.sender.name}. Follow @realMaskbook (mask.io) to claim red packet on Twitter.`,
+                            '#Maskbook',
+                        ].join('\n'),
+                    )}`
+                case 'facebook.com':
+                    return `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(
+                        [
+                            `I just claimed a red packet from ${payload.sender.name}. Follow @realMaskbook (mask.io) to claim red packet on Facebook.`,
+                            '#Maskbook',
+                        ].join('\n'),
+                    )}&u=mask.io`
+            }
+        }
+        return ''
+    }, [canClaim])
+    const [claimState, claimCallback, resetClaimCallback] = useClaimCallback(from, payload.rpid, payload.password)
+    const [refundState, refundCallback, resetRefundCallback] = useRefundCallback(from, payload.rpid)
+
+    // close the transaction dialog
+    const [_, setTransactionDialogOpen] = useRemoteControlledDialog(
+        WalletMessageCenter,
+        'transactionDialogUpdated',
+        (ev) => {
+            if (ev.open) return
+            resetClaimCallback()
+            resetRefundCallback()
+        },
+    )
+
+    // open the transation dialog
+    useEffect(() => {
+        if (claimState.type === TransactionStateType.UNKNOWN) return
+        if (!availability || !token) return
+        setTransactionDialogOpen({
+            open: true,
+            shareLink,
+            state: canClaim ? claimState : refundState,
+            summary: canClaim
+                ? `Claiming red packet from ${payload.sender.name}`
+                : canRefund
+                ? `Refunding red packet for ${formatBalance(
+                      new BigNumber(availability.balance),
+                      token.decimals,
+                      token.decimals,
+                  )} ${token.symbol}`
+                : '',
+        })
+    }, [canClaim, canRefund, shareLink, claimState, refundState])
+    //#endregion
 
     const onClaimOrRefund = useCallback(async () => {
-        setOpenTransactionDialog(true)
         if (canClaim) await claimCallback()
         else if (canRefund) await refundCallback()
     }, [canClaim, canRefund, claimCallback, refundCallback])
-
-    const onTransactionDialogClose = useCallback(() => {
-        setOpenTransactionDialog(false)
-    }, [claimState])
-    //#endregion
 
     // the red packet can fetch without account
     if (!availability || !token)
@@ -249,23 +297,6 @@ export function RedPacket(props: RedPacketProps) {
                     })}
                 />
             </Card>
-
-            {/* {canClaim || canRefund ? (
-                <TransactionDialog
-                    state={canClaim ? claimState : refundState}
-                    summary={
-                        canClaim
-                            ? `Claiming red packet from ${payload.sender.name}`
-                            : `Refunding red packet for ${formatBalance(
-                                  new BigNumber(availability.balance),
-                                  token.decimals,
-                                  token.decimals,
-                              )} ${token.symbol}`
-                    }
-                    open={openTransactionDialog}
-                    onClose={onTransactionDialogClose}
-                />
-            ) : null} */}
         </>
     )
 }

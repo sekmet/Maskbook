@@ -243,7 +243,7 @@ export function Trader(props: TraderProps) {
                   } for ${trade.v2Trade.outputAmount.toSignificant(6)} ${trade.v2Trade.outputAmount.currency.symbol}`
                 : '',
         })
-    }, [swapState, trade.v2Trade])
+    }, [swapState /* update tx dialog only if state changed */])
     //#endregion
 
     return (

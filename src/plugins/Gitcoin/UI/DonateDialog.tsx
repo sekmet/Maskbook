@@ -141,7 +141,7 @@ function DonateDialogUI(props: DonateDialogUIProps) {
     const [donateState, donateCallback, resetDonateCallback] = useDonateCallback(address ?? '', amount, token)
     //#endregion
 
-    //#region remote controlled tx dialog
+    //#region remote controlled transaction dialog
     const shareLink = useMemo(() => {
         switch (getActivatedUI()?.networkIdentifier) {
             case 'twitter.com':
@@ -193,7 +193,7 @@ function DonateDialogUI(props: DonateDialogUIProps) {
                 token.symbol
             } for ${title}`,
         })
-    }, [shareLink, donateState])
+    }, [donateState /* update tx dialog only if state changed */])
     //#endregion
 
     //#region submit button
