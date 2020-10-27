@@ -1,0 +1,410 @@
+[
+    {
+        "state_id": "1",
+        "state_name_abbr": "AL",
+        "state_name": "Alabama",
+        "votes": 9,
+        "vote_for_trump_start_at": 101001,
+        "vote_for_biden_start_at": 201001
+    },
+    {
+        "state_id": "2",
+        "state_name_abbr": "AK",
+        "state_name": "Alaska",
+        "votes": 3,
+        "vote_for_trump_start_at": 102001,
+        "vote_for_biden_start_at": 202001
+    },
+    {
+        "state_id": "3",
+        "state_name_abbr": "AZ",
+        "state_name": "Arizona",
+        "votes": 11,
+        "vote_for_trump_start_at": 103001,
+        "vote_for_biden_start_at": 203001
+    },
+    {
+        "state_id": "4",
+        "state_name_abbr": "AR",
+        "state_name": "Arkansas",
+        "votes": 6,
+        "vote_for_trump_start_at": 104001,
+        "vote_for_biden_start_at": 204001
+    },
+    {
+        "state_id": "5",
+        "state_name_abbr": "CA",
+        "state_name": "California",
+        "votes": 55,
+        "vote_for_trump_start_at": 105001,
+        "vote_for_biden_start_at": 205001
+    },
+    {
+        "state_id": "6",
+        "state_name_abbr": "CO",
+        "state_name": "Colorado",
+        "votes": 9,
+        "vote_for_trump_start_at": 106001,
+        "vote_for_biden_start_at": 206001
+    },
+    {
+        "state_id": "7",
+        "state_name_abbr": "CT",
+        "state_name": "Connecticut",
+        "votes": 7,
+        "vote_for_trump_start_at": 107001,
+        "vote_for_biden_start_at": 207001
+    },
+    {
+        "state_id": "8",
+        "state_name_abbr": "DE",
+        "state_name": "Delaware",
+        "votes": 3,
+        "vote_for_trump_start_at": 108001,
+        "vote_for_biden_start_at": 208001
+    },
+    {
+        "state_id": "9",
+        "state_name_abbr": "FL",
+        "state_name": "Florida",
+        "votes": 29,
+        "vote_for_trump_start_at": 109001,
+        "vote_for_biden_start_at": 209001
+    },
+    {
+        "state_id": "10",
+        "state_name_abbr": "GA",
+        "state_name": "Georgia",
+        "votes": 16,
+        "vote_for_trump_start_at": 110001,
+        "vote_for_biden_start_at": 210001
+    },
+    {
+        "state_id": "11",
+        "state_name_abbr": "HI",
+        "state_name": "Hawaii",
+        "votes": 4,
+        "vote_for_trump_start_at": 111001,
+        "vote_for_biden_start_at": 211001
+    },
+    {
+        "state_id": "12",
+        "state_name_abbr": "ID",
+        "state_name": "Idaho",
+        "votes": 4,
+        "vote_for_trump_start_at": 112001,
+        "vote_for_biden_start_at": 212001
+    },
+    {
+        "state_id": "13",
+        "state_name_abbr": "IL",
+        "state_name": "Illinois",
+        "votes": 20,
+        "vote_for_trump_start_at": 113001,
+        "vote_for_biden_start_at": 213001
+    },
+    {
+        "state_id": "14",
+        "state_name_abbr": "IN",
+        "state_name": "Indiana",
+        "votes": 11,
+        "vote_for_trump_start_at": 114001,
+        "vote_for_biden_start_at": 214001
+    },
+    {
+        "state_id": "15",
+        "state_name_abbr": "IA",
+        "state_name": "Iowa",
+        "votes": 6,
+        "vote_for_trump_start_at": 115001,
+        "vote_for_biden_start_at": 215001
+    },
+    {
+        "state_id": "16",
+        "state_name_abbr": "KS",
+        "state_name": "Kansas",
+        "votes": 6,
+        "vote_for_trump_start_at": 116001,
+        "vote_for_biden_start_at": 216001
+    },
+    {
+        "state_id": "17",
+        "state_name_abbr": "KY",
+        "state_name": "Kentucky",
+        "votes": 8,
+        "vote_for_trump_start_at": 117001,
+        "vote_for_biden_start_at": 217001
+    },
+    {
+        "state_id": "18",
+        "state_name_abbr": "LA",
+        "state_name": "Louisiana",
+        "votes": 8,
+        "vote_for_trump_start_at": 118001,
+        "vote_for_biden_start_at": 218001
+    },
+    {
+        "state_id": "19",
+        "state_name_abbr": "ME",
+        "state_name": "Maine",
+        "votes": 4,
+        "vote_for_trump_start_at": 119001,
+        "vote_for_biden_start_at": 219001
+    },
+    {
+        "state_id": "20",
+        "state_name_abbr": "MD",
+        "state_name": "Maryland",
+        "votes": 10,
+        "vote_for_trump_start_at": 120001,
+        "vote_for_biden_start_at": 220001
+    },
+    {
+        "state_id": "21",
+        "state_name_abbr": "MA",
+        "state_name": "Massachusetts",
+        "votes": 11,
+        "vote_for_trump_start_at": 121001,
+        "vote_for_biden_start_at": 221001
+    },
+    {
+        "state_id": "22",
+        "state_name_abbr": "MI",
+        "state_name": "Michigan",
+        "votes": 16,
+        "vote_for_trump_start_at": 122001,
+        "vote_for_biden_start_at": 222001
+    },
+    {
+        "state_id": "23",
+        "state_name_abbr": "MN",
+        "state_name": "Minnesota",
+        "votes": 10,
+        "vote_for_trump_start_at": 123001,
+        "vote_for_biden_start_at": 223001
+    },
+    {
+        "state_id": "24",
+        "state_name_abbr": "MS",
+        "state_name": "Mississippi",
+        "votes": 6,
+        "vote_for_trump_start_at": 124001,
+        "vote_for_biden_start_at": 224001
+    },
+    {
+        "state_id": "25",
+        "state_name_abbr": "MO",
+        "state_name": "Missouri",
+        "votes": 10,
+        "vote_for_trump_start_at": 125001,
+        "vote_for_biden_start_at": 225001
+    },
+    {
+        "state_id": "26",
+        "state_name_abbr": "MT",
+        "state_name": "Montana",
+        "votes": 3,
+        "vote_for_trump_start_at": 126001,
+        "vote_for_biden_start_at": 226001
+    },
+    {
+        "state_id": "27",
+        "state_name_abbr": "NE",
+        "state_name": "Nebraska",
+        "votes": 5,
+        "vote_for_trump_start_at": 127001,
+        "vote_for_biden_start_at": 227001
+    },
+    {
+        "state_id": "28",
+        "state_name_abbr": "NV",
+        "state_name": "Nevada",
+        "votes": 6,
+        "vote_for_trump_start_at": 128001,
+        "vote_for_biden_start_at": 228001
+    },
+    {
+        "state_id": "29",
+        "state_name_abbr": "NH",
+        "state_name": "New Hampshire",
+        "votes": 4,
+        "vote_for_trump_start_at": 129001,
+        "vote_for_biden_start_at": 229001
+    },
+    {
+        "state_id": "30",
+        "state_name_abbr": "NJ",
+        "state_name": "New Jersey",
+        "votes": 14,
+        "vote_for_trump_start_at": 130001,
+        "vote_for_biden_start_at": 230001
+    },
+    {
+        "state_id": "31",
+        "state_name_abbr": "NM",
+        "state_name": "New Mexico",
+        "votes": 5,
+        "vote_for_trump_start_at": 131001,
+        "vote_for_biden_start_at": 231001
+    },
+    {
+        "state_id": "32",
+        "state_name_abbr": "NY",
+        "state_name": "New York",
+        "votes": 29,
+        "vote_for_trump_start_at": 132001,
+        "vote_for_biden_start_at": 232001
+    },
+    {
+        "state_id": "33",
+        "state_name_abbr": "NC",
+        "state_name": "North Carolina",
+        "votes": 15,
+        "vote_for_trump_start_at": 133001,
+        "vote_for_biden_start_at": 233001
+    },
+    {
+        "state_id": "34",
+        "state_name_abbr": "ND",
+        "state_name": "North Dakota",
+        "votes": 3,
+        "vote_for_trump_start_at": 134001,
+        "vote_for_biden_start_at": 234001
+    },
+    {
+        "state_id": "35",
+        "state_name_abbr": "OH",
+        "state_name": "Ohio",
+        "votes": 18,
+        "vote_for_trump_start_at": 135001,
+        "vote_for_biden_start_at": 235001
+    },
+    {
+        "state_id": "36",
+        "state_name_abbr": "OK",
+        "state_name": "Oklahoma",
+        "votes": 7,
+        "vote_for_trump_start_at": 136001,
+        "vote_for_biden_start_at": 236001
+    },
+    {
+        "state_id": "37",
+        "state_name_abbr": "OR",
+        "state_name": "Oregon",
+        "votes": 7,
+        "vote_for_trump_start_at": 137001,
+        "vote_for_biden_start_at": 237001
+    },
+    {
+        "state_id": "38",
+        "state_name_abbr": "PA",
+        "state_name": "Pennsylvania",
+        "votes": 20,
+        "vote_for_trump_start_at": 138001,
+        "vote_for_biden_start_at": 238001
+    },
+    {
+        "state_id": "39",
+        "state_name_abbr": "RI",
+        "state_name": "Rhode Island",
+        "votes": 4,
+        "vote_for_trump_start_at": 139001,
+        "vote_for_biden_start_at": 239001
+    },
+    {
+        "state_id": "40",
+        "state_name_abbr": "SC",
+        "state_name": "South Carolina",
+        "votes": 9,
+        "vote_for_trump_start_at": 140001,
+        "vote_for_biden_start_at": 240001
+    },
+    {
+        "state_id": "41",
+        "state_name_abbr": "SD",
+        "state_name": "South Dakota",
+        "votes": 3,
+        "vote_for_trump_start_at": 141001,
+        "vote_for_biden_start_at": 241001
+    },
+    {
+        "state_id": "42",
+        "state_name_abbr": "TN",
+        "state_name": "Tennessee",
+        "votes": 11,
+        "vote_for_trump_start_at": 142001,
+        "vote_for_biden_start_at": 242001
+    },
+    {
+        "state_id": "43",
+        "state_name_abbr": "TX",
+        "state_name": "Texas",
+        "votes": 38,
+        "vote_for_trump_start_at": 143001,
+        "vote_for_biden_start_at": 243001
+    },
+    {
+        "state_id": "44",
+        "state_name_abbr": "UT",
+        "state_name": "Utah",
+        "votes": 6,
+        "vote_for_trump_start_at": 144001,
+        "vote_for_biden_start_at": 244001
+    },
+    {
+        "state_id": "45",
+        "state_name_abbr": "VT",
+        "state_name": "Vermont",
+        "votes": 3,
+        "vote_for_trump_start_at": 145001,
+        "vote_for_biden_start_at": 245001
+    },
+    {
+        "state_id": "46",
+        "state_name_abbr": "VA",
+        "state_name": "Virginia",
+        "votes": 13,
+        "vote_for_trump_start_at": 146001,
+        "vote_for_biden_start_at": 246001
+    },
+    {
+        "state_id": "47",
+        "state_name_abbr": "WA",
+        "state_name": "Washington",
+        "votes": 12,
+        "vote_for_trump_start_at": 147001,
+        "vote_for_biden_start_at": 247001
+    },
+    {
+        "state_id": "48",
+        "state_name_abbr": "WV",
+        "state_name": "West Virginia",
+        "votes": 5,
+        "vote_for_trump_start_at": 148001,
+        "vote_for_biden_start_at": 248001
+    },
+    {
+        "state_id": "49",
+        "state_name_abbr": "WI",
+        "state_name": "Wisconsin",
+        "votes": 10,
+        "vote_for_trump_start_at": 149001,
+        "vote_for_biden_start_at": 249001
+    },
+    {
+        "state_id": "50",
+        "state_name_abbr": "WY",
+        "state_name": "Wyoming",
+        "votes": 3,
+        "vote_for_trump_start_at": 150001,
+        "vote_for_biden_start_at": 250001
+    },
+    {
+        "state_id": "51",
+        "state_name_abbr": "DC",
+        "state_name": "Washington, D.C.",
+        "votes": 3,
+        "vote_for_trump_start_at": 151001,
+        "vote_for_biden_start_at": 251001
+    }
+]
