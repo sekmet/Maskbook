@@ -1,6 +1,11 @@
 export interface Election2020JSONPayload {}
 
-export enum US_STATE {
+export enum US_PARTY_TYPE {
+    BLUE,
+    RED,
+}
+
+export enum US_STATE_TYPE {
     AL = 1,
     AK,
     AZ,
