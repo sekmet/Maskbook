@@ -1,6 +1,5 @@
-import { GetContext } from '@dimensiondev/holoflows-kit/es'
+import { isEnvironment, Environment } from '@dimensiondev/holoflows-kit'
 import { untilDomLoaded } from '../dom'
-import { renderInShadowRootSettings } from '../../settings/settings'
 import { Flags } from '../flags'
 
 const attached = document.createElement('div')
@@ -14,8 +13,7 @@ untilDomLoaded().then(() => {
 })
 
 export function PortalShadowRoot(): Element {
-    if (GetContext() === 'options') return document.body
+    if (isEnvironment(Environment.ExtensionProtocol)) return document.body
     if (globalThis.location.hostname === 'localhost') return document.body
-    if (!renderInShadowRootSettings.value) return document.body
     return inner
 }

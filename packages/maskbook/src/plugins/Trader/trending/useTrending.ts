@@ -1,25 +1,38 @@
 import { useAsync } from 'react-use'
-import Services from '../../../extension/service'
-import type { DataProvider, Currency } from '../types'
+import { PluginTraderRPC } from '../messages'
+import type { DataProvider, TagType } from '../types'
+import { useCurrentCurrency } from './useCurrentCurrency'
 
-export function useTrending(keyword: string, platform: DataProvider, currency: Currency | null) {
-    const { value: trending, loading: loadingTrending, error: errorTrending } = useAsync(async () => {
-        if (!currency) return null
-        try {
-            return Services.Plugin.invokePlugin(
-                'maskbook.trader',
-                'getCoinTrendingByKeyword',
-                keyword,
-                platform,
-                currency,
-            )
-        } catch (e) {
-            return null
-        }
-    }, [platform, currency, keyword])
+export function useTrendingByKeyword(tagType: TagType, keyword: string, dataProvider: DataProvider) {
+    const currencyAsyncResult = useCurrentCurrency(dataProvider)
+    const trendingAsyncResult = useAsync(async () => {
+        if (!keyword) return null
+        if (!currencyAsyncResult.value) return null
+        return PluginTraderRPC.getCoinTrendingByKeyword(keyword, tagType, currencyAsyncResult.value, dataProvider)
+    }, [dataProvider, currencyAsyncResult.value, keyword])
     return {
-        value: trending,
-        loading: loadingTrending,
-        error: errorTrending,
+        value: {
+            currency: currencyAsyncResult.value,
+            trending: trendingAsyncResult.value,
+        },
+        loading: currencyAsyncResult.loading || trendingAsyncResult.loading,
+        error: currencyAsyncResult.error || trendingAsyncResult.error,
+    }
+}
+
+export function useTrendingById(id: string, dataProvider: DataProvider) {
+    const currencyAsyncResult = useCurrentCurrency(dataProvider)
+    const trendingAsyncResult = useAsync(async () => {
+        if (!id) return null
+        if (!currencyAsyncResult.value) return null
+        return PluginTraderRPC.getCoinTrendingById(id, currencyAsyncResult.value, dataProvider)
+    }, [dataProvider, currencyAsyncResult.value, id])
+    return {
+        value: {
+            currency: currencyAsyncResult.value,
+            trending: trendingAsyncResult.value,
+        },
+        loading: currencyAsyncResult.loading || trendingAsyncResult.loading,
+        error: currencyAsyncResult.error || trendingAsyncResult.error,
     }
 }

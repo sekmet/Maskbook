@@ -1,4 +1,3 @@
-import React from 'react'
 import {
     TableContainer,
     Table,
@@ -13,13 +12,13 @@ import {
     Typography,
 } from '@material-ui/core'
 import type { Ticker, DataProvider } from '../../types'
-import { formatCurrency, formatEthereumAddress } from '../../../Wallet/formatter'
+import { formatCurrency, formatElapsed, formatEthereumAddress } from '../../../Wallet/formatter'
 import { useI18N } from '../../../../utils/i18n-next-ui'
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
         container: {
-            height: 266,
+            maxHeight: 266,
             '&::-webkit-scrollbar': {
                 display: 'none',
             },
@@ -38,13 +37,14 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         placeholder: {
             paddingTop: theme.spacing(10),
+            paddingBottom: theme.spacing(10),
             borderStyle: 'none',
         },
     }),
 )
 
 export interface TickersTableProps {
-    platform: DataProvider
+    dataProvider: DataProvider
     tickers: Ticker[]
 }
 
@@ -56,6 +56,7 @@ export function TickersTable(props: TickersTableProps) {
         t('plugin_trader_table_pair'),
         t('plugin_trader_table_price'),
         t('plugin_trader_table_volume'),
+        t('plugin_trader_table_updated'),
     ]
     const tickers = props.tickers.map((ticker, index) => (
         <TableRow key={index}>
@@ -77,6 +78,7 @@ export function TickersTable(props: TickersTableProps) {
             </TableCell>
             <TableCell className={classes.cell}>{formatCurrency(ticker.price, '$')}</TableCell>
             <TableCell className={classes.cell}>{formatCurrency(ticker.volume, '$')}</TableCell>
+            <TableCell className={classes.cell}>{formatElapsed(ticker.updated.getTime())}</TableCell>
         </TableRow>
     ))
 
@@ -97,7 +99,7 @@ export function TickersTable(props: TickersTableProps) {
                 ) : (
                     <TableBody>
                         <TableRow>
-                            <TableCell className={classes.cell} colSpan={4} style={{ borderStyle: 'none' }}>
+                            <TableCell className={classes.cell} colSpan={5} style={{ borderStyle: 'none' }}>
                                 <Typography className={classes.placeholder} align="center" color="textSecondary">
                                     {t('plugin_trader_no_data')}
                                 </Typography>

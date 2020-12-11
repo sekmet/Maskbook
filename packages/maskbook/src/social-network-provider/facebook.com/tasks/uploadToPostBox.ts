@@ -4,7 +4,7 @@ import { getUrl, downloadUrl, pasteImageToActiveElements } from '../../../utils/
 import Services from '../../../extension/service'
 import { decodeArrayBuffer } from '../../../utils/type-transform/String-ArrayBuffer'
 import { GrayscaleAlgorithm } from '@dimensiondev/stego-js/cjs/grayscale'
-import { MessageCenter } from '../../../utils/messages'
+import { MaskMessage } from '../../../utils/messages'
 
 export async function uploadToPostBoxFacebook(
     text: string,
@@ -13,7 +13,11 @@ export async function uploadToPostBoxFacebook(
     const { autoPasteFailedRecover, relatedText, template = 'v2' } = options
     const { lastRecognizedIdentity } = getActivatedUI()
     const blankImage = await downloadUrl(
-        getUrl(`${template === 'v2' ? '/image-payload' : '/wallet'}/payload-${template}.png`),
+        getUrl(
+            `${
+                template === 'v2' ? '/image-payload' : template === 'v3' ? '/election-2020' : '/wallet'
+            }/payload-${template}.png`,
+        ),
     ).then((x) => x.arrayBuffer())
     const secretImage = new Uint8Array(
         decodeArrayBuffer(
@@ -34,7 +38,7 @@ export async function uploadToPostBoxFacebook(
     async function uploadFail() {
         if (autoPasteFailedRecover) {
             const blob = new Blob([secretImage], { type: 'image/png' })
-            MessageCenter.emit('autoPasteFailed', { text: relatedText, image: blob })
+            MaskMessage.events.autoPasteFailed.sendToLocal({ text: relatedText, image: blob })
         }
     }
 }

@@ -1,5 +1,27 @@
 import base from '../packages/maskbook/src/manifest.json'
 type Manifest = typeof base & { [key: string]: any }
+export function manifestV3(manifest: Manifest) {
+    const isDev = manifest.content_security_policy
+    // https://developer.chrome.com/docs/extensions/mv3/intro/mv3-migration/
+    manifest.manifest_version = 3
+    manifest.permissions = manifest.permissions.filter((x) => !x.startsWith('http'))
+    manifest.optional_permissions = manifest.optional_permissions.filter((x) => x !== '<all_urls>')
+    manifest.host_permissions = ['<all_urls>']
+    isDev && manifest.host_permissions.push('https://localhost:8080/*', 'http://localhost:8087/*')
+    if (manifest.content_security_policy) {
+        const old = manifest.content_security_policy.replace("'unsafe-eval'", '')
+        manifest.content_security_policy = { extension_pages: old }
+    }
+    manifest.action = manifest.browser_action
+    delete manifest.browser_action
+    manifest.web_accessible_resources = [
+        {
+            resources: isDev ? ['js/*', '*.json', '*.js'] : ['js/*'],
+            matches: ['<all_urls>'],
+        } as any,
+    ]
+    manifest.background = { service_worker: '/manifest-v3.entry.js' } as any
+}
 export function firefox(manifest: Manifest) {
     // TODO: To make `browser.tabs.executeScript` run on Firefox,
     // we need an extra permission "tabs".
@@ -9,7 +31,7 @@ export function firefox(manifest: Manifest) {
 /** Geckoview is firefox with some quirks. */
 export function geckoview(manifest: Manifest) {
     firefox(manifest)
-    manifest.permissions.push('<all_urls>')
+    manifest.permissions.push('nativeMessaging', 'nativeMessagingFromContent', 'geckoViewAddons', '<all_urls>')
     manifest.applications = {
         gecko: {
             id: 'info@dimension.com',
@@ -25,8 +47,10 @@ export function development(manifest: Manifest) {
     manifest.name = 'Maskbook (development)'
     // required by Webpack HMR
     manifest.web_accessible_resources.push('*.json', '*.js')
-    // Required by eval-source-map in development
-    manifest.content_security_policy = "script-src 'self' blob: filesystem: 'unsafe-eval';"
+    // 8097 is react devtools
+    // connect-src is used by firefox
+    manifest.content_security_policy = `script-src 'self' 'unsafe-eval'; connect-src * https://localhost:8080/ http://localhost:8097; object-src 'self';`
+    manifest.permissions.push('https://localhost:8080/*', 'http://localhost:8087/*')
     manifest.key = // ID：jkoeaghipilijlahjplgbfiocjhldnap
         'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoz51rhO1w+wD' +
         '0EKZJEFJaSMkIcIj0qRadfi0tqcl5nbpuJAsafvLe3MaTbW9LhbixTg9' +
@@ -36,6 +60,7 @@ export function development(manifest: Manifest) {
         'TDEYcqr0OMZvVrKz7IkJasER1uJyoGj4gFJeXNGE8y4Sqb150wBju70l' +
         'KNKlNevWDRJKasG9CjagAD2+BAfqNyltn7KwK7jAyL1w6d6mOwIDAQAB'
 }
+export function production(manifest: Manifest) {}
 export function E2E(manifest: Manifest) {
     development(manifest)
     // can not capture permission dialog in pptr
@@ -44,4 +69,9 @@ export function E2E(manifest: Manifest) {
     )
     manifest.optional_permissions = []
 }
-export function production(manifest: Manifest) {}
+export function beta(manifest: Manifest) {
+    manifest.name += ' (Beta)'
+}
+export function nightly(manifest: Manifest) {
+    manifest.name += ' (Nightly)'
+}

@@ -1,5 +1,4 @@
-import React from 'react'
-import type { PluginConfig } from '../plugin'
+import { PluginConfig, PluginStage, PluginScope } from '../types'
 import {
     TypedMessage,
     isTypedMessageAnchor,
@@ -9,12 +8,16 @@ import {
 import { makeTypedMessageCashTrending } from './messages/TypedMessageCashTrending'
 import { PageInspector } from './UI/PageInspector'
 import { PLUGIN_IDENTIFIER } from './constants'
+import { SettingsDialog } from './UI/trader/SettingsDialog'
 
-const isCashTagMessage = (m: TypedMessage): m is TypedMessageAnchor => isTypedMessageAnchor(m) && m.category === 'cash'
+const isCashTagMessage = (m: TypedMessage): m is TypedMessageAnchor =>
+    isTypedMessageAnchor(m) && ['cash', 'hash'].includes(m.category)
 
 export const TraderPluginDefine: PluginConfig = {
     pluginName: 'Trader',
     identifier: PLUGIN_IDENTIFIER,
+    stage: PluginStage.Production,
+    scope: PluginScope.Public,
     messageProcessor(message: TypedMessageCompound) {
         return {
             ...message,
@@ -22,6 +25,18 @@ export const TraderPluginDefine: PluginConfig = {
         }
     },
     PageComponent() {
-        return <PageInspector />
+        return (
+            <>
+                <PageInspector />
+                <SettingsDialog />
+            </>
+        )
+    },
+    DashboardComponent() {
+        return (
+            <>
+                <SettingsDialog />
+            </>
+        )
     },
 }

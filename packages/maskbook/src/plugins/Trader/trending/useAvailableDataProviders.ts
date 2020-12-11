@@ -1,8 +1,10 @@
 import { useAsync } from 'react-use'
-import Services from '../../../extension/service'
+import { PluginTraderRPC } from '../messages'
+import type { TagType } from '../types'
 
-export function useAvailablePlatforms(keyword: string) {
-    return useAsync(() => Services.Plugin.invokePlugin('maskbook.trader', 'getAvailableDataProviders', keyword), [
-        keyword,
-    ])
+export function useAvailableDataProviders(type: TagType, keyword: string) {
+    return useAsync(async () => {
+        if (!keyword) return []
+        return PluginTraderRPC.getAvailableDataProviders(type, keyword)
+    }, [type, keyword])
 }

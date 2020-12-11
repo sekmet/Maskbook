@@ -1,4 +1,3 @@
-import React from 'react'
 import classNames from 'classnames'
 import { useColorStyles } from '../../../../utils/theme'
 import { makeStyles, Theme, createStyles } from '@material-ui/core'
@@ -31,6 +30,7 @@ export interface PriceChangedProps {
 export function PriceChanged(props: PriceChangedProps) {
     const color = useColorStyles()
     const classes = useStyles()
+    if (props.amount === 0) return null
     return (
         <span className={classNames(classes.root, props.amount > 0 ? color.success : color.error)}>
             {props.amount > 0 ? <ArrowDropUpIcon className={classes.icon} /> : null}

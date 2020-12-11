@@ -1,7 +1,5 @@
 import { batchReplace, parseURL, regexMatchAll } from '../../utils/utils'
 import { isNull } from 'lodash-es'
-import anchorme from 'anchorme'
-
 const ICAO9303Checksum = {
     encode: (input: string) => {
         return `${input}${(
@@ -50,7 +48,7 @@ export const twitterEncoding = {
      * @link https://github.com/DimensionDev/Maskbook/issues/198
      */
     payloadEncoder: (text: string) =>
-        `https://maskbook.com/?PostData_v1=${batchReplace(text, [
+        `https://mask.io/?PostData_v1=${batchReplace(text, [
             ['🎼', '%20'],
             [':||', '%40'],
             ['+', '-'],

@@ -1,4 +1,4 @@
-import React from 'react'
+import { useCallback, useState } from 'react'
 import {
     makeStyles,
     Theme,
@@ -18,9 +18,18 @@ import { useChainId } from '../hooks/useChainState'
 import { TransactionState, TransactionStateType } from '../hooks/useTransactionState'
 import { resolveTransactionLinkOnEtherscan } from '../pipes'
 import { InjectedDialog } from '../../components/shared/InjectedDialog'
+import { useRemoteControlledDialog } from '../../utils/hooks/useRemoteControlledDialog'
+import { WalletMessages } from '../../plugins/Wallet/messages'
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
+        content: {
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: theme.spacing(5, 3),
+        },
         icon: {
             fontSize: 64,
             width: 64,
@@ -31,7 +40,7 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         primary: {
             fontSize: 18,
-            marginTop: theme.spacing(4),
+            marginTop: theme.spacing(1),
         },
         secondary: {
             fontSize: 14,
@@ -39,90 +48,112 @@ const useStyles = makeStyles((theme: Theme) =>
     }),
 )
 
-interface TransactionDialogUIProps extends withClasses<never> {
-    open: boolean
-    state: TransactionState
-    summary: React.ReactNode
-    onClose?: () => void
-}
+interface TransactionDialogUIProps extends withClasses<never> {}
 
 function TransactionDialogUI(props: TransactionDialogUIProps) {
     const { t } = useI18N()
     const classes = useStylesExtends(useStyles(), props)
-    const { state, summary, open, onClose } = props
 
     const chainId = useChainId()
 
+    //#region remote controlled dialog
+    const [state, setState] = useState<TransactionState | null>(null)
+    const [shareLink, setShareLink] = useState('')
+    const [summary, setSummary] = useState('')
+    const [open, setOpen] = useRemoteControlledDialog(WalletMessages.events.transactionDialogUpdated, (ev) => {
+        if (ev.open) {
+            setState(ev.state)
+            setSummary(ev.summary ?? '')
+            setShareLink(ev.shareLink ?? '')
+        } else {
+            setSummary('')
+            setShareLink('')
+        }
+    })
+    const onShare = useCallback(() => {
+        if (shareLink) window.open(shareLink, '_blank', 'noopener noreferrer')
+        onClose()
+    }, [shareLink])
+    const onClose = useCallback(() => {
+        setOpen({
+            open: false,
+        })
+    }, [setOpen])
+    //#endregion
+
+    if (!state) return null
     return (
-        <>
-            <InjectedDialog open={open} onExit={onClose} title="Transaction">
-                <DialogContent>
-                    {state.type === TransactionStateType.WAIT_FOR_CONFIRMING ? (
-                        <>
-                            <CircularProgress size={64} color="primary" />
-                            <Typography className={classes.primary} color="textPrimary" variant="subtitle1">
-                                Waiting For Confirmation
-                            </Typography>
-                            <Typography className={classes.secondary} color="textSecondary">
-                                {summary}
-                            </Typography>
-                        </>
-                    ) : null}
-                    {state.type === TransactionStateType.HASH ? (
-                        <>
-                            <DoneIcon className={classes.icon} />
-                            <Typography className={classes.primary} color="textPrimary">
-                                Your transaction was submitted!
-                            </Typography>
-                            <Typography>
-                                <Link
-                                    className={classes.link}
-                                    href={resolveTransactionLinkOnEtherscan(chainId, state.hash)}
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    View on Etherscan
-                                </Link>
-                            </Typography>
-                        </>
-                    ) : null}
-                    {state.type === TransactionStateType.CONFIRMED ? (
-                        <>
-                            <DoneIcon className={classes.icon} />
-                            <Typography className={classes.primary} color="textPrimary">
-                                Your transaction was confirmed!
-                            </Typography>
-                            <Typography>
-                                <Link
-                                    className={classes.link}
-                                    href={resolveTransactionLinkOnEtherscan(chainId, state.receipt.transactionHash)}
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    View on Etherscan
-                                </Link>
-                            </Typography>
-                        </>
-                    ) : null}
-                    {state.type === TransactionStateType.FAILED ? (
-                        <>
-                            <WarningIcon className={classes.icon} />
-                            <Typography className={classes.primary} color="textPrimary">
-                                {state.error.message.includes('User denied transaction signature.')
-                                    ? 'Transaction was rejected!'
-                                    : state.error.message}
-                            </Typography>
-                        </>
-                    ) : null}
-                </DialogContent>
-                {state.type !== TransactionStateType.UNKNOWN &&
-                state.type !== TransactionStateType.WAIT_FOR_CONFIRMING ? (
-                    <DialogActions>
-                        <Button color="primary" size="large" variant="contained" fullWidth onClick={onClose}>
-                            {state.type === TransactionStateType.FAILED ? 'Dismiss' : 'Close'}
-                        </Button>
-                    </DialogActions>
+        <InjectedDialog open={open} onClose={onClose} title="Transaction" DialogProps={{ maxWidth: 'xs' }}>
+            <DialogContent className={classes.content}>
+                {state.type === TransactionStateType.WAIT_FOR_CONFIRMING ? (
+                    <>
+                        <CircularProgress size={64} color="primary" />
+                        <Typography className={classes.primary} color="textPrimary" variant="subtitle1">
+                            {t('plugin_wallet_transaction_wait_for_confirmation')}
+                        </Typography>
+                        <Typography className={classes.secondary} color="textSecondary">
+                            {summary}
+                        </Typography>
+                    </>
                 ) : null}
-            </InjectedDialog>
-        </>
+                {state.type === TransactionStateType.HASH ? (
+                    <>
+                        <DoneIcon className={classes.icon} />
+                        <Typography className={classes.primary} color="textPrimary">
+                            {t('plugin_wallet_transaction_submitted')}
+                        </Typography>
+                        <Typography>
+                            <Link
+                                className={classes.link}
+                                href={resolveTransactionLinkOnEtherscan(chainId, state.hash)}
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                {t('plugin_wallet_view_on_etherscan')}
+                            </Link>
+                        </Typography>
+                    </>
+                ) : null}
+                {state.type === TransactionStateType.CONFIRMED ? (
+                    <>
+                        <DoneIcon className={classes.icon} />
+                        <Typography className={classes.primary} color="textPrimary">
+                            {t('plugin_wallet_transaction_confirmed')}
+                        </Typography>
+                        <Typography>
+                            <Link
+                                className={classes.link}
+                                href={resolveTransactionLinkOnEtherscan(chainId, state.receipt.transactionHash)}
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                {t('plugin_wallet_view_on_etherscan')}
+                            </Link>
+                        </Typography>
+                    </>
+                ) : null}
+                {state.type === TransactionStateType.FAILED ? (
+                    <>
+                        <WarningIcon className={classes.icon} />
+                        <Typography className={classes.primary} color="textPrimary">
+                            {state.error.message.includes('User denied transaction signature.')
+                                ? t('plugin_wallet_transaction_rejected')
+                                : state.error.message}
+                        </Typography>
+                    </>
+                ) : null}
+            </DialogContent>
+            {state.type !== TransactionStateType.UNKNOWN && state.type !== TransactionStateType.WAIT_FOR_CONFIRMING ? (
+                <DialogActions>
+                    <Button
+                        color="primary"
+                        size="large"
+                        variant="contained"
+                        fullWidth
+                        onClick={state.type === TransactionStateType.FAILED || !shareLink ? onClose : onShare}>
+                        {state.type === TransactionStateType.FAILED || !shareLink ? t('dismiss') : t('share')}
+                    </Button>
+                </DialogActions>
+            ) : null}
+        </InjectedDialog>
     )
 }
 

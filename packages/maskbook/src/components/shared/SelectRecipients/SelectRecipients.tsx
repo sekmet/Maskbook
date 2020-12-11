@@ -1,12 +1,10 @@
-import * as React from 'react'
 import type { Group, Profile } from '../../../database'
-import { makeStyles, Box } from '@material-ui/core'
+import { makeStyles, Box, Chip } from '@material-ui/core'
 import type { ProfileOrGroupInListProps } from '../SelectPeopleAndGroups'
 import { GroupInChipProps, GroupInChip } from './GroupInChip'
 import { ProfileIdentifier, GroupIdentifier } from '../../../database/type'
 import AddIcon from '@material-ui/icons/Add'
-import { ClickableChip } from './ClickableChip'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SelectRecipientsDialogUIProps, SelectRecipientsDialogUI } from './SelectRecipientsDialog'
 import { useI18N } from '../../../utils/i18n-next-ui'
 import { difference } from 'lodash-es'
@@ -48,7 +46,7 @@ export function SelectRecipientsUI<T extends Group | Profile = Group | Profile>(
     const [open, setOpen] = useState(false)
     const selectedProfiles = selected.filter((x) => isProfile(x)) as Profile[]
     const selectedGroups = selected.filter((x) => isGroup(x)) as Group[]
-    const selectedGroupMembers = React.useMemo(
+    const selectedGroupMembers = useMemo(
         () => selectedGroups.flatMap((group) => group.members).map((identifier) => identifier.toText()),
         [selectedGroups],
     )
@@ -69,20 +67,14 @@ export function SelectRecipientsUI<T extends Group | Profile = Group | Profile>(
                 />
             ))}
             {children}
-            <ClickableChip
-                ChipProps={{
-                    label: t('post_dialog__select_specific_friends_title', {
-                        selected: new Set([
-                            ...selectedGroupMembers,
-                            ...selectedProfiles.map((x) => x.identifier.toText()),
-                        ]).size,
-                    }),
-                    avatar: <AddIcon />,
-                    disabled: props.disabled || profileItems.length === 0,
-                    onClick() {
-                        setOpen(true)
-                    },
-                }}
+            <Chip
+                label={t('post_dialog__select_specific_friends_title', {
+                    selected: new Set([...selectedGroupMembers, ...selectedProfiles.map((x) => x.identifier.toText())])
+                        .size,
+                })}
+                avatar={<AddIcon />}
+                disabled={props.disabled || profileItems.length === 0}
+                onClick={() => setOpen(true)}
             />
             <SelectRecipientsDialogUI
                 open={open}

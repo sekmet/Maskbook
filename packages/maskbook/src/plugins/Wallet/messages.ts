@@ -1,58 +1,63 @@
-import { BatchedMessageCenter } from '../../utils/messages'
-import type { Token } from '../../web3/types'
+import type { TransactionState } from '../../web3/hooks/useTransactionState'
+import type { ERC20TokenDetailed, EtherTokenDetailed } from '../../web3/types'
+import { createPluginMessage } from '../utils/createPluginMessage'
+import { createPluginRPC } from '../utils/createPluginRPC'
+import { PLUGIN_IDENTIFIER } from './constants'
 
 type SelectERC20TokenDialogEvent =
     | {
           open: true
-          tabId?: string
           address?: string
           lists?: string[]
           excludeTokens?: string[]
       }
     | {
           open: false
-          tabId?: string
-          token?: Token
+          token?: EtherTokenDetailed | ERC20TokenDetailed
       }
 
 type SelectProviderDialogEvent =
     | {
           open: true
-          tabId?: string
       }
     | {
           open: false
-          tabId?: string
           address?: string
       }
 
 type SelectWalletDialogEvent =
     | {
           open: true
-          tabId?: string
       }
     | {
           open: false
-          tabId?: string
+      }
+
+type WalletStatusDialogEvent = {
+    open: boolean
+}
+
+type TransactionDialogEvent =
+    | {
+          open: true
+          state: TransactionState
+          shareLink?: string
+          summary?: string
+      }
+    | {
+          open: false
       }
 
 type WalletConnectQRCodeDialogEvent =
     | {
           open: true
-          tabId?: string
           uri: string
       }
     | {
           open: false
-          tabId?: string
       }
 
-export interface MaskbookWalletMessages {
-    /**
-     * WalletConnect QR Code dialog
-     */
-    walletConnectQRCodeDialogUpdated: WalletConnectQRCodeDialogEvent
-
+interface WalletMessage {
     /**
      * Select wallet dialog
      */
@@ -67,6 +72,25 @@ export interface MaskbookWalletMessages {
      * Select token dialog
      */
     selectERC20TokenDialogUpdated: SelectERC20TokenDialogEvent
+
+    /**
+     * Transaction dialog
+     */
+    transactionDialogUpdated: TransactionDialogEvent
+
+    /**
+     * Wallet status dialog
+     */
+    walletStatusDialogUpdated: WalletStatusDialogEvent
+
+    /**
+     * WalletConnect QR Code dialog
+     */
+    walletConnectQRCodeDialogUpdated: WalletConnectQRCodeDialogEvent
+    walletsUpdated: void
+    tokensUpdated: void
+    rpc: unknown
 }
 
-export const WalletMessageCenter = new BatchedMessageCenter<MaskbookWalletMessages>(true, 'maskbook-wallet-events')
+export const WalletMessages = createPluginMessage<WalletMessage>(PLUGIN_IDENTIFIER)
+export const WalletRPC = createPluginRPC(PLUGIN_IDENTIFIER, () => import('./services'), WalletMessages.events.rpc)

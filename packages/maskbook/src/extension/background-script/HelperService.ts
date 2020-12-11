@@ -26,12 +26,16 @@ export function fetch(url: string) {
     return globalThis.fetch(url).then((x) => x.blob())
 }
 
-export function saveAsFile(file: ArrayBuffer, mineType: string, suggestingFileName: string) {
-    const blob = new Blob([file], { type: mineType })
-    const url = URL.createObjectURL(blob)
-    return browser.downloads.download({
+export function saveAsFileFromUrl(url: string, fileName = '') {
+    browser.downloads.download({
         url,
-        filename: suggestingFileName,
+        filename: fileName,
         saveAs: true,
     })
+}
+
+export function saveAsFileFromBuffer(file: BufferSource, mimeType: string, fileName = '') {
+    const blob = new Blob([file], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    saveAsFileFromUrl(url, fileName)
 }

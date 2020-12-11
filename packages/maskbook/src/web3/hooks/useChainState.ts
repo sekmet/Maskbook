@@ -2,31 +2,40 @@ import { useEffect, useState } from 'react'
 import { useValueRef } from '../../utils/hooks/useValueRef'
 import { ChainId, ProviderType } from '../types'
 import {
-    ChainState,
     currentChainStateSettings,
     currentMaskbookChainIdSettings,
     currentMetaMaskChainIdSettings,
     currentWalletConnectChainIdSettings,
 } from '../../settings/settings'
-import { useSelectedWallet, useWallet } from '../../plugins/Wallet/hooks/useWallet'
+import type { ChainState } from '../../settings/types'
+import { useWallet } from '../../plugins/Wallet/hooks/useWallet'
+import { Flags } from '../../utils/flags'
+import { currentSelectedWalletProviderSettings } from '../../plugins/Wallet/settings'
 
 /**
  * Get the chain id which is using by the given (or default) wallet
  */
-export function useChainId(address?: string) {
-    const wallet_ = useWallet(address ?? '')
-    const selectedWallet_ = useSelectedWallet()
-
+export function useChainId() {
+    const provider = useValueRef(currentSelectedWalletProviderSettings)
     const MaskbookChainId = useValueRef(currentMaskbookChainIdSettings)
     const MetaMaskChainId = useValueRef(currentMetaMaskChainIdSettings)
     const WalletConnectChainId = useValueRef(currentWalletConnectChainIdSettings)
 
-    const wallet = wallet_ ?? selectedWallet_
+    const wallet = useWallet()
     if (!wallet) return MaskbookChainId
-    if (wallet.provider === ProviderType.Maskbook) return MaskbookChainId
-    if (wallet.provider === ProviderType.MetaMask) return MetaMaskChainId
-    if (wallet.provider === ProviderType.WalletConnect) return WalletConnectChainId
+    if (provider === ProviderType.Maskbook) return MaskbookChainId
+    if (provider === ProviderType.MetaMask) return MetaMaskChainId
+    if (provider === ProviderType.WalletConnect) return WalletConnectChainId
     return MaskbookChainId
+}
+
+/**
+ * Retruns true if chain id is available
+ */
+export function useChainIdValid() {
+    const chainId = useChainId()
+    const selectedWallet = useWallet()
+    return !Flags.wallet_network_strict_mode_enabled || chainId === ChainId.Mainnet || !selectedWallet
 }
 
 /**

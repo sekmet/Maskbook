@@ -1,11 +1,11 @@
-import React, { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useAsync } from 'react-use'
 import { Typography } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import classNames from 'classnames'
 import qr from 'qrcode'
 import { Trans } from 'react-i18next'
-import { iOSHost } from '../../utils/iOS-RPC'
+import { nativeAPI } from '../../utils/native-rpc'
 import { useColorStyles } from '../../utils/theme'
 import { cache } from '../../utils/sessionStorageCache'
 
@@ -74,10 +74,15 @@ export function QRCode({ text, options = {}, canvasProps }: QRProps) {
     )
 }
 
-export function WKWebkitQRScanner(props: { onScan?: (val: string) => void; onQuit?: () => void }) {
+export function NativeQRScanner(props: { onScan?: (val: string) => void; onQuit?: () => void }) {
     useAsync(async () => {
         try {
-            props.onScan?.(await iOSHost.scanQRCode())
+            if (nativeAPI?.type === 'iOS') {
+                props.onScan?.(await nativeAPI.api.scanQRCode())
+            } else {
+                // TODO:
+                throw new Error('Not supported on Android')
+            }
         } catch (e) {
             props.onQuit?.()
         }

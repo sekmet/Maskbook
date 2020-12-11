@@ -2,6 +2,7 @@ import { createTypedMessageMetadataReader, createRenderWithMetadata } from '../.
 import { RedPacketMetaKey } from './constants'
 import type { RedPacketJSONPayload, RedPacketRecord } from './types'
 import schema from './schema.json'
+
 export const RedPacketMetadataReader = createTypedMessageMetadataReader<RedPacketJSONPayload>(RedPacketMetaKey, schema)
 export const renderWithRedPacketMetadata = createRenderWithMetadata(RedPacketMetadataReader)
 

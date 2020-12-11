@@ -1,8 +1,7 @@
-import React from 'react'
 import type { PersonaIdentifier } from '../../database/type'
 import { renderInShadowRoot } from '../../utils/shadow-root/renderInShadowRoot'
 import Services from '../../extension/service'
-import { ValueRef } from '@dimensiondev/holoflows-kit/es'
+import { ValueRef } from '@dimensiondev/holoflows-kit'
 import type { SocialNetworkUI } from '../ui'
 import { SetupGuide, SetupGuideProps } from '../../components/InjectedComponents/SetupGuide'
 import { Flags } from '../../utils/flags'
@@ -29,12 +28,9 @@ export function createTaskStartSetupGuideDefault(_: () => SocialNetworkUI, props
             />,
             {
                 shadow: () => {
-                    if (!shadowRoot) {
-                        shadowRoot = dom.attachShadow({ mode: Flags.using_ShadowDOM_attach_mode })
-                    }
+                    if (!shadowRoot) shadowRoot = dom.attachShadow({ mode: Flags.using_ShadowDOM_attach_mode })
                     return shadowRoot
                 },
-                normal: () => dom,
             },
         )
         Services.Crypto.getMyProveBio(for_, _().networkIdentifier)

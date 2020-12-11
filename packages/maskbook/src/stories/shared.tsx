@@ -1,21 +1,22 @@
-import React from 'react'
 import { storiesOf } from '@storybook/react'
 import { ChooseIdentity } from '../components/shared/ChooseIdentity'
 import { SettingsUI, SettingsUIEnum } from '../components/shared-settings/useSettingsUI'
-import { ValueRef } from '@dimensiondev/holoflows-kit/es'
+import { ValueRef } from '@dimensiondev/holoflows-kit'
 import { List, Paper, Typography } from '@material-ui/core'
 import { useValueRef } from '../utils/hooks/useValueRef'
 import { Image } from '../components/shared/Image'
 import { number, radios, boolean, text } from '@storybook/addon-knobs'
+import { CrashUI } from '../components/shared/ErrorBoundary'
+import { action } from '@storybook/addon-actions'
 
 let blob: Blob = undefined!
-const data = fetch('https://maskbook.com/img/maskbook--logotype-black.png')
+const data = fetch('https://mask.io/img/maskbook--logotype-black.png')
     .then((x) => x.blob())
     .then((x) => (blob = x))
 
 storiesOf('Shared Components', module)
     .add('Image', () => {
-        const url = 'https://maskbook.com/img/maskbook--logotype-white.png'
+        const url = 'https://mask.io/img/maskbook--logotype-white.png'
         const _ = text('src', 'img')
         const src = _ === 'img' ? url : _ === 'blob' ? blob : _
         return (
@@ -38,6 +39,20 @@ storiesOf('Shared Components', module)
     })
     .add('ChooseIdentity', () => {
         return <ChooseIdentity identities={[]} />
+    })
+    .add('Crash UI', () => {
+        return (
+            <CrashUI
+                contain={text('Title', 'Maskbook')}
+                type={text('type', 'TypeError')}
+                message={text(
+                    'message',
+                    `Uncaught EvalError: Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: "script-src 'self' 'unsafe-inline'".`,
+                )}
+                onRetry={action('retry')}
+                stack={text('stack', new Error().stack || '')}
+            />
+        )
     })
     .add('SettingsUI', () => {
         function D(props: { x: ValueRef<unknown> }) {

@@ -1,59 +1,50 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import type PopperJs from 'popper.js'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { Instance } from '@popperjs/core'
 import { Popper, ClickAwayListener, PopperProps, Fade } from '@material-ui/core'
 import { useLocation, useWindowScroll } from 'react-use'
-import { TraderMessageCenter } from '../../messages'
-import { WalletMessageCenter as MessageCenterWallet, MaskbookWalletMessages } from '../../../Wallet/messages'
-import type { DataProvider } from '../../types'
+import { PluginTraderMessages } from '../../messages'
+import { WalletMessages } from '../../../Wallet/messages'
+import type { DataProvider, TagType } from '../../types'
 import { useRemoteControlledDialog } from '../../../../utils/hooks/useRemoteControlledDialog'
+import { PluginTransakMessages } from '../../../Transak/messages'
 
 export interface TrendingPopperProps {
-    children?: (name: string, platforms: DataProvider[], reposition?: () => void) => React.ReactNode
+    children?: (name: string, type: TagType, dataProviders: DataProvider[], reposition?: () => void) => React.ReactNode
     PopperProps?: Partial<PopperProps>
 }
 
 export function TrendingPopper(props: TrendingPopperProps) {
-    const popperRef = useRef<PopperJs | null>(null)
+    const popperRef = useRef<Instance | null>(null)
     const [freezed, setFreezed] = useState(false) // disable any click
     const [locked, setLocked] = useState(false) // state is updating, lock UI
     const [name, setName] = useState('')
+    const [type, setType] = useState<TagType | undefined>()
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-    const [availablePlatforms, setAvailablePlatforms] = useState<DataProvider[]>([])
+    const [availableProviders, setAvailableProviders] = useState<DataProvider[]>([])
 
     //#region select token and provider dialog could be open by trending view
     const onFreezed = useCallback((ev) => setFreezed(ev.open), [])
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectERC20TokenDialogUpdated'>(
-        MessageCenterWallet,
-        'selectERC20TokenDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectProviderDialogUpdated'>(
-        MessageCenterWallet,
-        'selectProviderDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'selectWalletDialogUpdated'>(
-        MessageCenterWallet,
-        'selectWalletDialogUpdated',
-        onFreezed,
-    )
-    useRemoteControlledDialog<MaskbookWalletMessages, 'walletConnectQRCodeDialogUpdated'>(
-        MessageCenterWallet,
-        'walletConnectQRCodeDialogUpdated',
-        onFreezed,
-    )
+    useRemoteControlledDialog(WalletMessages.events.selectERC20TokenDialogUpdated, onFreezed)
+    useRemoteControlledDialog(WalletMessages.events.selectProviderDialogUpdated, onFreezed)
+    useRemoteControlledDialog(WalletMessages.events.selectWalletDialogUpdated, onFreezed)
+    useRemoteControlledDialog(WalletMessages.events.walletStatusDialogUpdated, onFreezed)
+    useRemoteControlledDialog(WalletMessages.events.walletConnectQRCodeDialogUpdated, onFreezed)
+    useRemoteControlledDialog(WalletMessages.events.transactionDialogUpdated, onFreezed)
+    useRemoteControlledDialog(PluginTransakMessages.events.buyTokenDialogUpdated, onFreezed)
+    useRemoteControlledDialog(PluginTraderMessages.events.swapSettingsUpdated, onFreezed)
     //#endregion
 
     //#region open or close popper
     // open popper from message center
     useEffect(
         () =>
-            TraderMessageCenter.on('cashTagObserved', (ev) => {
+            PluginTraderMessages.events.cashTagObserved.on((ev) => {
                 const update = () => {
                     setLocked(true)
                     setName(ev.name)
+                    setType(ev.type)
                     setAnchorEl(ev.element)
-                    setAvailablePlatforms(ev.availablePlatforms)
+                    setAvailableProviders(ev.dataProviders)
                     setLocked(false)
                 }
                 // observe the same element
@@ -87,7 +78,7 @@ export function TrendingPopper(props: TrendingPopperProps) {
     //#endregion
 
     if (locked) return null
-    if (!anchorEl) return null
+    if (!anchorEl || !type) return null
     return (
         <ClickAwayListener
             onClickAway={() => {
@@ -104,8 +95,8 @@ export function TrendingPopper(props: TrendingPopperProps) {
                 {({ TransitionProps }) => (
                     <Fade in={Boolean(anchorEl)} {...TransitionProps}>
                         <div>
-                            {props.children?.(name, availablePlatforms, () =>
-                                setTimeout(() => popperRef.current?.scheduleUpdate(), 100),
+                            {props.children?.(name, type, availableProviders, () =>
+                                setTimeout(() => popperRef.current?.update(), 100),
                             )}
                         </div>
                     </Fade>

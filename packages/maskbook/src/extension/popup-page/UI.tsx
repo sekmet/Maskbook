@@ -1,7 +1,7 @@
 import '../../social-network-provider/popup-page/index'
 import '../../setup.ui'
 
-import React, { useCallback } from 'react'
+import { useCallback, memo } from 'react'
 import { noop } from 'lodash-es'
 import { ThemeProvider, makeStyles, Theme, withStyles } from '@material-ui/core/styles'
 import { Button, Paper, Divider, Typography, Box } from '@material-ui/core'
@@ -12,12 +12,10 @@ import { I18nextProvider } from 'react-i18next'
 import { useI18N } from '../../utils/i18n-next-ui'
 import i18nNextInstance from '../../utils/i18n-next'
 import { useValueRef } from '../../utils/hooks/useValueRef'
-import { getUrl } from '../../utils/utils'
-import { useChainId } from '../../web3/hooks/useChainState'
-import { WalletMessageCenter, MaskbookWalletMessages } from '../../plugins/Wallet/messages'
+import { getUrl, sleep } from '../../utils/utils'
+import { WalletMessages } from '../../plugins/Wallet/messages'
 import { useRemoteControlledDialog } from '../../utils/hooks/useRemoteControlledDialog'
-import { useWallets } from '../../plugins/Wallet/hooks/useWallet'
-import { Alert } from '@material-ui/lab'
+import { Alert } from '@material-ui/core'
 import { useAsyncRetry } from 'react-use'
 
 const GlobalCss = withStyles({
@@ -80,8 +78,6 @@ function PopupUI() {
 
     const ui = getActivatedUI()
     const identities = useValueRef(ui.myIdentitiesRef)
-    const chainId = useChainId()
-    const wallets = useWallets()
 
     const { value: hasPermission = true, retry: checkPermission } = useAsyncRetry(ui.hasPermission)
 
@@ -96,24 +92,31 @@ function PopupUI() {
         }
     }, [])
 
-    const [, setOpen] = useRemoteControlledDialog<MaskbookWalletMessages, 'selectProviderDialogUpdated'>(
-        WalletMessageCenter,
-        'selectProviderDialogUpdated',
+    const [, setSelectProviderDailogOpen] = useRemoteControlledDialog(
+        WalletMessages.events.selectProviderDialogUpdated,
         noop,
         'activated',
     )
     const onConnect = useCallback(async () => {
-        setOpen({
-            open: true,
-        })
-        setTimeout(() => window.close(), 100)
-    }, [setOpen])
+        setSelectProviderDailogOpen({ open: true })
+        await sleep(200)
+        window.close()
+    }, [setSelectProviderDailogOpen])
+
+    const Trademark = memo(() => {
+        if (ui.networkIdentifier !== 'localhost') {
+            return null
+        }
+        const src =
+            process.env.NODE_ENV === 'production'
+                ? getUrl('MB--ComboCircle--Blue.svg')
+                : getUrl('MB--ComboCircle--Nightly.svg')
+        return <img className={classes.logo} src={src} />
+    })
 
     return (
         <Paper className={classes.container}>
-            {ui.networkIdentifier === 'localhost' ? (
-                <img className={classes.logo} src={getUrl('MB--ComboCircle--Blue.svg')} />
-            ) : null}
+            <Trademark />
             {hasPermission === false ? (
                 <Alert severity="error" variant="outlined" action={null}>
                     <Typography>{t('popup_missing_permission')}</Typography>
@@ -128,14 +131,22 @@ function PopupUI() {
             ) : null}
             {ui.networkIdentifier === 'localhost' || identities.length === 0 ? null : (
                 <>
-                    <Box className={classes.header} display="flex" justifyContent="space-between">
+                    <Box
+                        className={classes.header}
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                        }}>
                         <Typography className={classes.title}>{t('popup_current_persona')}</Typography>
                     </Box>
                     <ChooseIdentity identities={identities} />
                 </>
             )}
             <Divider className={classes.divider} />
-            <Box display="flex">
+            <Box
+                sx={{
+                    display: 'flex',
+                }}>
                 {ui.networkIdentifier !== 'localhost' && identities.length === 0 ? (
                     <Button className={classes.button} variant="text" onClick={onEnter}>
                         {t('popup_setup_first_persona')}

@@ -32,15 +32,6 @@ async function writeMessages(name: string, messages: unknown) {
 
 function getUsedKeys(content: string) {
     const keys = new Set<string>()
-    const closest = <T extends ts.Node>(node: ts.Node, match: (node: ts.Node) => node is T): T | undefined => {
-        while (node) {
-            if (match(node)) {
-                return node
-            }
-            node = node.parent
-        }
-        return undefined
-    }
     const transformer = (context: ts.TransformationContext) => (rootNode: ts.Node) => {
         const setFromVariableWrapper = (variableValue: string): ((node: ts.Node) => ts.Node) => {
             const setFromVariable = (node: ts.Node): ts.Node => {
@@ -80,7 +71,7 @@ function getUsedKeys(content: string) {
         }
         const visit: ts.Visitor = (node) => {
             if (ts.isIdentifier(node) && node.text === 't') {
-                const expression = closest(node, ts.isCallExpression)
+                const expression = ts.findAncestor(node, ts.isCallExpression)
                 if (!checkCallExpression(expression?.expression)) {
                     return node
                 }
@@ -154,21 +145,10 @@ async function syncKey(locales = _.without(_locales, 'en')) {
     const baseKeys = _.keys(baseMessages)
     for (const name of locales) {
         const nextMessages = await readMessages(name)
-        const emptyKeys = _.reduce(
-            _.difference(baseKeys, _.keys(nextMessages)),
-            (record, name) => {
-                record[name] = ''
-                return record
-            },
-            {} as Record<string, string>,
-        )
-        const modifedMessages = _.chain(nextMessages)
-            .assign(emptyKeys)
-            .toPairs()
-            .sortBy(([key]) => baseKeys.indexOf(key))
-            .fromPairs()
-            .value()
-        await writeMessages(name, modifedMessages)
+        for (const key of _.difference(baseKeys, _.keys(nextMessages))) {
+            nextMessages[key] = ''
+        }
+        await writeMessages(name, _.pick(nextMessages, baseKeys))
     }
 }
 
@@ -178,7 +158,7 @@ async function diagnosis() {
         for (const locale of _locales) {
             const filePath = `packages/maskbook/src/_locales/${locale}/messages.json`
             console.log(
-                `::warning file=${filePath}::Run \`yarn locale-kit --remove-unused-keys\` to solve this problem`,
+                `::warning file=${filePath}::Run \`npm run locale-kit -- --remove-unused-keys\` to solve this problem`,
             )
             const messages = _.keys(await readMessages(locale))
             for (const key of unusedKeys) {
@@ -193,7 +173,7 @@ async function diagnosis() {
     if (!_.isEmpty(unsyncedLocales)) {
         for (const [locale, names] of _.toPairs(unsyncedLocales)) {
             const filePath = `packages/maskbook/src/_locales/${locale}/messages.json`
-            console.log(`::warning file=${filePath}::Run \`yarn locale-kit --sync-key\` to solve this problem`)
+            console.log(`::warning file=${filePath}::Run \`npm run locale-kit -- --sync-key\` to solve this problem`)
             for (const name of names) {
                 console.log(`::warning file=${filePath}::The ${JSON.stringify(name)} is unsynced`)
             }
@@ -203,7 +183,11 @@ async function diagnosis() {
 
 async function main() {
     const unusedKeys = await findAllUnusedKeys()
-    console.error('Scanned', unusedKeys.length, 'unused keys')
+    console.error(
+        'Scanned',
+        unusedKeys.length,
+        'unused keys, run `npm run locale-kit -- --remove-unused-keys` to remove them.',
+    )
     console.error('Unsynced', _.keys(await findAllUnsyncedLocales()), 'locales')
     if (process.argv.includes('--remove-unused-keys')) {
         await removeAllUnusedKeys(unusedKeys)

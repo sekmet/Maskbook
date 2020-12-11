@@ -1,11 +1,11 @@
 import { Button, DialogActions, DialogContent, DialogProps, makeStyles } from '@material-ui/core'
 import { isNil } from 'lodash-es'
 import { useSnackbar } from 'notistack'
-import React from 'react'
+import { useState } from 'react'
 import { useBeforeUnload } from 'react-use'
 import { useStylesExtends } from '../../components/custom-ui-helper'
 import { InjectedDialog } from '../../components/shared/InjectedDialog'
-import { getActivatedUI } from '../../social-network/ui'
+import { editActivatedPostMetadata } from '../../social-network/ui'
 import { useI18N } from '../../utils/i18n-next-ui'
 import { Entry } from './components'
 import { META_KEY_1 } from './constants'
@@ -36,22 +36,21 @@ const FileServiceDialog: React.FC<Props> = (props) => {
     const { t } = useI18N()
     const classes = useStylesExtends(useStyles(), props)
     const snackbar = useSnackbar()
-    const [uploading, setUploading] = React.useState(false)
-    const [selectedFileInfo, setSelectedFileInfo] = React.useState<FileInfo | null>(null)
+    const [uploading, setUploading] = useState(false)
+    const [selectedFileInfo, setSelectedFileInfo] = useState<FileInfo | null>(null)
     useBeforeUnload(uploading)
     const onInsert = () => {
         if (isNil(selectedFileInfo)) {
             return
         }
-        const { typedMessageMetadata } = getActivatedUI()
-        const next = new Map(typedMessageMetadata.value.entries())
-        if (selectedFileInfo) {
-            // Make a Date become string
-            next.set(META_KEY_1, JSON.parse(JSON.stringify(selectedFileInfo)))
-        } else {
-            next.delete(META_KEY_1)
-        }
-        typedMessageMetadata.value = next
+        editActivatedPostMetadata((next) => {
+            if (selectedFileInfo) {
+                // Make a Date become string
+                next.set(META_KEY_1, JSON.parse(JSON.stringify(selectedFileInfo)))
+            } else {
+                next.delete(META_KEY_1)
+            }
+        })
         props.onConfirm(selectedFileInfo)
     }
     const onDecline = () => {
@@ -62,7 +61,7 @@ const FileServiceDialog: React.FC<Props> = (props) => {
         snackbar.enqueueSnackbar(t('plugin_file_service_uploading_on_cancal'))
     }
     return (
-        <InjectedDialog open={props.open} title={t('plugin_file_service_display_name')} onExit={onDecline}>
+        <InjectedDialog open={props.open} title={t('plugin_file_service_display_name')} onClose={onDecline}>
             <DialogContent>
                 <Exchange onUploading={setUploading} onInsert={setSelectedFileInfo}>
                     <Entry />

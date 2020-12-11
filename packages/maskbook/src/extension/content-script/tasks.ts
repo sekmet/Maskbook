@@ -1,10 +1,12 @@
-import { AutomatedTabTask, GetContext, AutomatedTabTaskRuntimeOptions } from '@dimensiondev/holoflows-kit'
-import { ProfileIdentifier, ECKeyIdentifier, Identifier } from '../../database/type'
 import {
-    disableOpenNewTabInBackgroundSettings,
-    currentSetupGuideStatus,
-    SetupGuideCrossContextStatus,
-} from '../../settings/settings'
+    AutomatedTabTask,
+    isEnvironment,
+    AutomatedTabTaskRuntimeOptions,
+    Environment,
+} from '@dimensiondev/holoflows-kit'
+import { ProfileIdentifier, ECKeyIdentifier, Identifier } from '../../database/type'
+import { disableOpenNewTabInBackgroundSettings, currentSetupGuideStatus } from '../../settings/settings'
+import type { SetupGuideCrossContextStatus } from '../../settings/types'
 import type { SocialNetworkUI } from '../../social-network/ui'
 import { memoizePromise } from '../../utils/memoize'
 import { safeGetActiveUI } from '../../utils/safeRequire'
@@ -121,7 +123,7 @@ export function exclusiveTasks(...args: Parameters<typeof realTasks>) {
 }
 
 sideEffect.then(untilDocumentReady).then(() => {
-    if (GetContext() !== 'content') return
+    if (!isEnvironment(Environment.ContentScript)) return
 
     //#region setup guide
     const network = getActivatedUI().networkIdentifier

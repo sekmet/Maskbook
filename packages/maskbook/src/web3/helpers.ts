@@ -3,8 +3,14 @@ import type { EventLog, TransactionReceipt } from 'web3-core'
 import Web3Utils, { AbiItem, AbiOutput } from 'web3-utils'
 import BigNumber from 'bignumber.js'
 import { CONSTANTS } from './constants'
-import { ChainId, EthereumTokenType, Token } from './types'
-import { unreachable } from '../utils/utils'
+import {
+    ChainId,
+    ERC20TokenDetailed,
+    EthereumTokenType,
+    EtherTokenDetailed,
+    CurrencyType,
+    AssetDetailed,
+} from './types'
 
 export function isSameAddress(addrA: string, addrB: string) {
     return addrA.toLowerCase() === addrB.toLowerCase()
@@ -18,15 +24,15 @@ export function isOKB(address: string) {
     return isSameAddress(address, getConstant(CONSTANTS, 'OBK_ADDRESS'))
 }
 
+export function isETH(address: string) {
+    return isSameAddress(address, getConstant(CONSTANTS, 'ETH_ADDRESS'))
+}
+
 export function addGasMargin(value: BigNumber) {
     return value.multipliedBy(new BigNumber(10000).plus(new BigNumber(1000))).dividedToIntegerBy(new BigNumber(10000))
 }
 
 //#region constants
-type Primitive = string | boolean | number
-type EnumRecord<T extends number, U> = {
-    [K in T]: U
-}
 export interface Web3Constants {
     [K: string]: EnumRecord<ChainId, Primitive | Primitive[]>
 }
@@ -52,7 +58,7 @@ export function getAllConstants<T extends Web3Constants, K extends keyof T>(cons
 }
 //#endregion
 
-export function createEetherToken(chainId: ChainId): Token {
+export function createEetherToken(chainId: ChainId) {
     return {
         type: EthereumTokenType.Ether,
         chainId,
@@ -60,16 +66,10 @@ export function createEetherToken(chainId: ChainId): Token {
         decimals: 18,
         name: 'Ether',
         symbol: 'ETH',
-    }
+    } as EtherTokenDetailed
 }
 
-export function createERC20Token(
-    chainId: ChainId,
-    address: string,
-    decimals: number,
-    name: string,
-    symbol: string,
-): Token {
+export function createERC20Token(chainId: ChainId, address: string, decimals: number, name: string, symbol: string) {
     return {
         type: EthereumTokenType.ERC20,
         chainId,
@@ -77,7 +77,7 @@ export function createERC20Token(
         decimals,
         name,
         symbol,
-    }
+    } as ERC20TokenDetailed
 }
 
 export function decodeOutputString(web3: Web3, abis: AbiOutput[], output: string) {
@@ -113,3 +113,6 @@ export function decodeEvents(web3: Web3, abis: AbiItem[], receipt: TransactionRe
         return accumulate
     }, {} as { [eventName: string]: EventLog })
 }
+
+export const getTokenUSDValue = (token: AssetDetailed) =>
+    token.value ? Number.parseFloat(token.value[CurrencyType.USD]) : 0

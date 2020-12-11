@@ -24,7 +24,7 @@ import { instanceOfTwitterUI } from '.'
 import type { ProfileIdentifier } from '../../../database/type'
 import { encodeArrayBuffer, decodeArrayBuffer } from '../../../utils/type-transform/String-ArrayBuffer'
 import { isMobileTwitter } from '../utils/isMobile'
-import { MessageCenter } from '../../../utils/messages'
+import { MaskMessage } from '../../../utils/messages'
 
 /**
  * Wait for up to 5000 ms
@@ -64,7 +64,7 @@ const taskPasteIntoPostBox: SocialNetworkUI['taskPasteIntoPostBox'] = (text, opt
     }
 
     const fail = (e: Error) => {
-        if (opt.autoPasteFailedRecover) MessageCenter.emit('autoPasteFailed', { text })
+        if (opt.autoPasteFailedRecover) MaskMessage.events.autoPasteFailed.sendToLocal({ text })
         throw e
     }
 
@@ -79,7 +79,11 @@ const taskUploadToPostBox: SocialNetworkUI['taskUploadToPostBox'] = async (text,
     const { template = 'v2', autoPasteFailedRecover, relatedText } = options
     const { lastRecognizedIdentity } = getActivatedUI()
     const blankImage = await downloadUrl(
-        getUrl(`${template === 'v2' ? '/image-payload' : '/wallet'}/payload-${template}.png`),
+        getUrl(
+            `${
+                template === 'v2' || template === 'v3' || template === 'v4' ? '/image-payload' : '/wallet'
+            }/payload-${template}.png`,
+        ),
     ).then((x) => x.arrayBuffer())
     const secretImage = new Uint8Array(
         decodeArrayBuffer(
@@ -97,7 +101,7 @@ const taskUploadToPostBox: SocialNetworkUI['taskUploadToPostBox'] = async (text,
 
     async function uploadFail() {
         if (autoPasteFailedRecover) {
-            MessageCenter.emit('autoPasteFailed', {
+            MaskMessage.events.autoPasteFailed.sendToLocal({
                 text: relatedText,
                 image: new Blob([secretImage], { type: 'image/png' }),
             })
@@ -112,7 +116,7 @@ const taskOpenComposeBox = async (
         shareToEveryOne?: boolean
     },
 ) => {
-    MessageCenter.emit('compositionUpdated', {
+    MaskMessage.events.compositionUpdated.sendToLocal({
         reason: 'timeline',
         open: true,
         content,

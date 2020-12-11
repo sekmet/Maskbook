@@ -1,8 +1,7 @@
 import '../../provider.worker'
 import '../../setup.ui'
-import '../tab'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useAsync } from 'react-use'
 import { CssBaseline, NoSsr, CircularProgress, Box, Typography, Card } from '@material-ui/core'
 import { ThemeProvider, makeStyles, createStyles } from '@material-ui/core/styles'
@@ -40,11 +39,12 @@ import ActionButton from './DashboardComponents/ActionButton'
 import ShowcaseBox from './DashboardComponents/ShowcaseBox'
 import { Flags } from '../../utils/flags'
 import { useMatchXS } from '../../utils/hooks/useMatchXS'
-import { PluginUI, PluginConfig } from '../../plugins/plugin'
+import type { PluginConfig } from '../../plugins/types'
+import { PluginUI } from '../../plugins/PluginUI'
 import { ErrorBoundary, withErrorBoundary } from '../../components/shared/ErrorBoundary'
 
 const useStyles = makeStyles((theme) => {
-    const dark = theme.palette.type === 'dark'
+    const dark = theme.palette.mode === 'dark'
     return createStyles({
         root: {
             '--monospace': 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
@@ -214,13 +214,13 @@ function PluginDashboardInspectorForEach({ config }: { config: PluginConfig }) {
 
 function DashboardPluginUI() {
     return (
-        <ErrorBoundary>
-            <ThemeProvider theme={useMaskbookTheme()}>
-                {[...PluginUI.values()].map((x) => (
-                    <PluginDashboardInspectorForEach key={x.identifier} config={x} />
-                ))}
-            </ThemeProvider>
-        </ErrorBoundary>
+        <ThemeProvider theme={useMaskbookTheme()}>
+            {[...PluginUI.values()].map((x) => (
+                <ErrorBoundary key={x.identifier} contain={`Plugin "${x.pluginName}"`}>
+                    <PluginDashboardInspectorForEach config={x} />
+                </ErrorBoundary>
+            ))}
+        </ThemeProvider>
     )
 }
 //#endregion

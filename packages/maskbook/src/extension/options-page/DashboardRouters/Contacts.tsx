@@ -1,4 +1,4 @@
-import React, { useMemo, useState, unstable_useTransition, useCallback } from 'react'
+import { useMemo, useState, unstable_useTransition, useCallback } from 'react'
 import DashboardRouterContainer from './Container'
 import { TextField, IconButton, Typography } from '@material-ui/core'
 import { makeStyles, createStyles } from '@material-ui/core/styles'
@@ -55,14 +55,13 @@ export default function DashboardContactsRouter() {
 
     const [search, setSearch] = useState('')
     const [searchUI, setSearchUI] = useState('')
-    const [startSearchTransition, isSearchPending] = unstable_useTransition({ timeoutMs: 5000 })
+    const [startSearchTransition, isSearchPending] = unstable_useTransition({})
     const [searchContactDialog, , openSearchContactDialog] = useModal(DashboardContactSearchDialog)
 
     const actions = useMemo(
         () => [
             <TextField
                 placeholder={t('search')}
-                variant="outlined"
                 size="small"
                 value={searchUI}
                 onChange={(e) => {
@@ -93,7 +92,7 @@ export default function DashboardContactsRouter() {
     const isReachingEnd = data && data[data.length - 1]?.length < 20
     const items = data ? ([] as Profile[]).concat(...data) : []
 
-    const [startPageTransition, isPagePending] = unstable_useTransition({ timeoutMs: 1e5 })
+    const [startPageTransition, isPagePending] = unstable_useTransition({})
     const nextPage = useCallback(
         () =>
             startPageTransition(() => {
@@ -107,10 +106,11 @@ export default function DashboardContactsRouter() {
             title={t('contacts')}
             empty={items.length === 0}
             actions={actions}
-            rightIcons={[
-                <IconButton onClick={() => openSearchContactDialog({ onSearch: setSearch })}>
-                    <SearchIcon />
-                </IconButton>,
+            floatingButtons={[
+                {
+                    icon: <SearchIcon />,
+                    handler: () => openSearchContactDialog({ onSearch: setSearch }),
+                },
             ]}>
             <Typography className={classes.title} variant="body2">
                 {t('people_in_database')}

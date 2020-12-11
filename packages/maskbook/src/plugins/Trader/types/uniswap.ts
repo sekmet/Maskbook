@@ -1,9 +1,7 @@
-export enum TradeStrategy {
-    ExactIn,
-    ExactOut,
-}
-
-export enum TokenPanelType {
-    Input,
-    Output,
+export enum WarningLevel {
+    LOW = 1,
+    MEDIUM,
+    HIGH,
+    CONFIRMATION_REQUIRED,
+    BLOCKED,
 }

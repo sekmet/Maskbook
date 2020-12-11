@@ -1,22 +1,22 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import classNames from 'classnames'
-import { Box, createStyles, Theme, makeStyles, InputBase, ThemeProvider } from '@material-ui/core'
+import { Box, createStyles, Theme, makeStyles, InputBase, ThemeProvider, Link, Button } from '@material-ui/core'
 import { Database as DatabaseIcon } from 'react-feather'
 import { v4 as uuid } from 'uuid'
 import { WrappedDialogProps, DashboardDialogCore, DashboardDialogWrapper } from './Base'
 import { useI18N } from '../../../utils/i18n-next-ui'
 import { DatabaseRecordType, DatabasePreviewCard } from '../DashboardComponents/DatabasePreviewCard'
-import ActionButton, { DebounceButton } from '../DashboardComponents/ActionButton'
+import ActionButton from '../DashboardComponents/ActionButton'
 import Services from '../../service'
 import { useAsync } from 'react-use'
 import AbstractTab, { AbstractTabProps } from '../DashboardComponents/AbstractTab'
 import { RestoreFromBackupBox } from '../DashboardComponents/RestoreFromBackupBox'
 import { useSnackbar } from 'notistack'
-import { merge, cloneDeep } from 'lodash-es'
 import { decompressBackupFile } from '../../../utils/type-transform/BackupFileShortRepresentation'
 import { UpgradeBackupJSONFile, BackupJSONFileLatest } from '../../../utils/type-transform/BackupFormat/JSON/latest'
 import { extraPermissions } from '../../../utils/permissions'
 import { green } from '@material-ui/core/colors'
+import { extendsTheme } from '../../../utils/theme'
 
 const useDatabaseStyles = makeStyles((theme: Theme) =>
     createStyles({
@@ -29,6 +29,9 @@ const useDatabaseStyles = makeStyles((theme: Theme) =>
             marginTop: 2,
             marginBottom: 28,
         },
+        buttonText: {
+            color: '#fff',
+        },
     }),
 )
 
@@ -36,9 +39,14 @@ const useDatabaseStyles = makeStyles((theme: Theme) =>
 export function DashboardBackupDialog(props: WrappedDialogProps) {
     const { t } = useI18N()
     const classes = useDatabaseStyles()
-    const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+    const { enqueueSnackbar } = useSnackbar()
 
     const { value, loading } = useAsync(() => Services.Welcome.generateBackupJSON())
+
+    // since Android doesn't support `browser.download.downloads`,
+    //  we should create download url before click button.
+    const backupInfo = useAsync(() => Services.Welcome.createBackupUrl({ download: false, onlyBackupWhoAmI: false }))
+
     const records = [
         { type: DatabaseRecordType.Persona, length: value?.personas.length ?? 0, checked: false },
         { type: DatabaseRecordType.Profile, length: value?.profiles.length ?? 0, checked: false },
@@ -67,19 +75,41 @@ export function DashboardBackupDialog(props: WrappedDialogProps) {
                 primary={t('backup_database')}
                 secondary={t('dashboard_backup_database_hint')}
                 footer={
-                    <Box className={classes.root} display="flex" flexDirection="column" alignItems="center">
+                    <Box
+                        className={classes.root}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                        }}>
                         <DatabasePreviewCard
                             classes={{ table: classes.dashboardPreviewCardTable }}
                             dense
                             records={records}
                         />
-                        <ActionButton
-                            loading={loading}
-                            disabled={loading || records.every((r) => !r.length)}
-                            variant="contained"
-                            onClick={onConfirm}>
-                            {t('dashboard_backup_database_confirmation')}
-                        </ActionButton>
+                        {/* Hack: this is an un-dry and costly temperary solution, will be replaced later */}
+                        {process.env.architecture === 'app' && process.env.target === 'firefox' ? (
+                            backupInfo.loading || loading ? null : (
+                                <Button
+                                    component={Link}
+                                    onClick={() => props.onClose()}
+                                    variant="contained"
+                                    href={backupInfo?.value?.url}
+                                    download={backupInfo?.value?.fileName}>
+                                    <span className={classes.buttonText}>
+                                        {t('dashboard_backup_database_confirmation')}
+                                    </span>
+                                </Button>
+                            )
+                        ) : (
+                            <ActionButton
+                                loading={loading}
+                                disabled={loading || records.every((r) => !r.length)}
+                                variant="contained"
+                                onClick={onConfirm}>
+                                {t('dashboard_backup_database_confirmation')}
+                            </ActionButton>
+                        )}
                     </Box>
                 }></DashboardDialogWrapper>
         </DashboardDialogCore>
@@ -119,7 +149,7 @@ function SelectBackup({ onConfirm }: SelectBackupProps) {
     const { t } = useI18N()
     const classes = useDatabaseStyles()
     const selectBackupClasses = useSelectBackupStyles()
-    const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+    const { enqueueSnackbar } = useSnackbar()
 
     const [file, setFile] = useState<File | null>(null)
     const [json, setJSON] = useState<BackupJSONFileLatest | null>(null)
@@ -141,7 +171,7 @@ function SelectBackup({ onConfirm }: SelectBackupProps) {
                         }}
                     />
                 ),
-                p: 0,
+                sx: { p: 0 },
             },
             {
                 id: 'text',
@@ -159,7 +189,7 @@ function SelectBackup({ onConfirm }: SelectBackupProps) {
                         }}
                     />
                 ),
-                p: 0,
+                sx: { p: 0 },
             },
         ],
         state,
@@ -198,10 +228,17 @@ function SelectBackup({ onConfirm }: SelectBackupProps) {
             footer={
                 <Box
                     className={classNames(classes.root, selectBackupClasses.root)}
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center">
-                    <Box display="flex" flexDirection="column" style={{ width: '100%' }}>
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}>
+                    <Box
+                        style={{ width: '100%' }}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}>
                         <AbstractTab {...tabProps}></AbstractTab>
                     </Box>
                     <ActionButton
@@ -255,7 +292,7 @@ function ConfirmBackup({ restoreId, date, backup, onDone }: ConfirmBackupProps) 
     const confirmBackupClasses = useConfirmBackupStyles({
         imported: imported === true,
     })
-    const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+    const { enqueueSnackbar } = useSnackbar()
 
     const time = new Date(date ? Number(date) : 0)
     const records = [
@@ -298,7 +335,13 @@ function ConfirmBackup({ restoreId, date, backup, onDone }: ConfirmBackupProps) 
                     : t('set_up_restore_confirmation_hint')
             }
             footer={
-                <Box className={classes.root} display="flex" flexDirection="column" alignItems="center">
+                <Box
+                    className={classes.root}
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}>
                     <DatabasePreviewCard
                         classes={{
                             table: classNames(
@@ -328,10 +371,10 @@ function ConfirmBackup({ restoreId, date, backup, onDone }: ConfirmBackupProps) 
 //#endregion
 
 //#region dashboard restore dialog
-const backupTheme = (theme: Theme): Theme =>
-    merge(cloneDeep(theme), {
-        overrides: {
-            MuiButton: {
+const backupTheme = extendsTheme((theme) => ({
+    components: {
+        MuiButton: {
+            styleOverrides: {
                 root: {
                     '&[hidden]': {
                         visibility: 'hidden',
@@ -339,7 +382,8 @@ const backupTheme = (theme: Theme): Theme =>
                 },
             },
         },
-    })
+    },
+}))
 
 enum RestoreStep {
     SelectBackup = 'select-backup',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     makeStyles,
     createStyles,
@@ -20,8 +20,7 @@ import { add as addDate } from 'date-fns'
 import { PortalShadowRoot } from '../../../utils/shadow-root/ShadowRootPortal'
 import { useStylesExtends } from '../../../components/custom-ui-helper'
 import AbstractTab, { AbstractTabProps } from '../../../extension/options-page/DashboardComponents/AbstractTab'
-import Services from '../../../extension/service'
-import { getActivatedUI } from '../../../social-network/ui'
+import { editActivatedPostMetadata } from '../../../social-network/ui'
 import { useCurrentIdentity } from '../../../components/DataSource/useActivatedUI'
 import type { PollGunDB } from '../Services'
 import { PollCardUI } from './Polls'
@@ -29,6 +28,7 @@ import type { PollMetaData } from '../types'
 import { POLL_META_KEY_1 } from '../constants'
 import { useI18N } from '../../../utils/i18n-next-ui'
 import { InjectedDialog } from '../../../components/shared/InjectedDialog'
+import { PluginPollRPC } from '../utils'
 
 const useNewPollStyles = makeStyles((theme) =>
     createStyles({
@@ -104,7 +104,7 @@ function NewPollUI(props: PollsDialogProps & NewPollProps) {
             minutes,
         })
         setLoading(true)
-        Services.Plugin.invokePlugin('maskbook.polls', 'createNewPoll', {
+        PluginPollRPC.createNewPoll({
             question,
             options,
             start_time,
@@ -207,7 +207,7 @@ function ExistingPollsUI(props: PollsDialogProps & ExistingPollsProps) {
 
     useEffect(() => {
         setLoading(true)
-        Services.Plugin.invokePlugin('maskbook.polls', 'getAllExistingPolls').then((polls) => {
+        PluginPollRPC.getAllExistingPolls().then((polls) => {
             setLoading(false)
             const myPolls: PollGunDB[] = []
             polls.map((poll) => {
@@ -265,10 +265,7 @@ export default function PollsDialog(props: PollsDialogProps) {
     }
 
     const insertPoll = (data?: PollMetaData | null) => {
-        const ref = getActivatedUI().typedMessageMetadata
-        const next = new Map(ref.value)
-        data ? next.set(POLL_META_KEY_1, data) : next.delete(POLL_META_KEY_1)
-        ref.value = next
+        editActivatedPostMetadata((next) => (data ? next.set(POLL_META_KEY_1, data) : next.delete(POLL_META_KEY_1)))
         props.onConfirm()
     }
 
@@ -288,7 +285,7 @@ export default function PollsDialog(props: PollsDialogProps) {
                         senderFingerprint={senderFingerprint}
                     />
                 ),
-                p: 0,
+                sx: { p: 0 },
             },
             {
                 label: t('plugin_poll_select_existing'),
@@ -299,19 +296,17 @@ export default function PollsDialog(props: PollsDialogProps) {
                         senderFingerprint={senderFingerprint}
                     />
                 ),
-                p: 0,
+                sx: { p: 0 },
             },
         ],
         state,
     }
 
     return (
-        <>
-            <InjectedDialog open={props.open} onExit={props.onDecline} title={t('plugin_poll_display_name')}>
-                <DialogContent>
-                    <AbstractTab height={450} {...tabProps} />
-                </DialogContent>
-            </InjectedDialog>
-        </>
+        <InjectedDialog open={props.open} onClose={props.onDecline} title={t('plugin_poll_display_name')}>
+            <DialogContent>
+                <AbstractTab height={450} {...tabProps} />
+            </DialogContent>
+        </InjectedDialog>
     )
 }

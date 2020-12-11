@@ -1,17 +1,20 @@
-import type { PluginConfig } from '../plugin'
-import React, { Suspense, useMemo } from 'react'
+import { PluginConfig, PluginStage, PluginScope } from '../types'
+import { Suspense, useMemo } from 'react'
 import { SnackbarContent } from '@material-ui/core'
 import { parseURL } from '../../utils/utils'
 import MaskbookPluginWrapper from '../MaskbookPluginWrapper'
 import { extractTextFromTypedMessage } from '../../protocols/typed-message'
 import { usePostInfoDetails } from '../../components/DataSource/usePostInfo'
 import { Gitcoin } from './UI/Gitcoin'
+import { gitcoinPluginID } from './constants'
 
 const isGitcoin = (x: string): boolean => x.startsWith('https://gitcoin.co/grants')
 
 export const GitcoinPluginDefine: PluginConfig = {
     pluginName: 'Gitcoin',
-    identifier: 'co.gitcoin',
+    identifier: gitcoinPluginID,
+    stage: PluginStage.Production,
+    scope: PluginScope.Public,
     successDecryptionInspector: function Component(props): JSX.Element | null {
         const text = useMemo(() => extractTextFromTypedMessage(props.message), [props.message])
         const link = useMemo(() => parseURL(text.val || ''), [text.val]).find(isGitcoin)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAsync } from 'react-use'
 import { DecryptPost, DecryptPostProps } from './DecryptedPost/DecryptedPost'
 import { AddToKeyStore, AddToKeyStoreProps } from './AddToKeyStore'
@@ -11,7 +11,8 @@ import { useValueRef } from '../../utils/hooks/useValueRef'
 import { debugModeSetting } from '../../settings/settings'
 import { DebugList } from '../DebugModeUI/DebugList'
 import type { TypedMessage } from '../../protocols/typed-message'
-import { PluginUI, PluginConfig } from '../../plugins/plugin'
+import type { PluginConfig } from '../../plugins/types'
+import { PluginUI } from '../../plugins/PluginUI'
 import { usePostInfoDetails, usePostInfo } from '../DataSource/usePostInfo'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 
@@ -116,7 +117,7 @@ function PluginPostInspector() {
     return (
         <>
             {[...PluginUI.values()].map((x) => (
-                <ErrorBoundary key={x.identifier}>
+                <ErrorBoundary contain={`Plugin "${x.pluginName}"`} key={x.identifier}>
                     <PluginPostInspectorForEach config={x} />
                 </ErrorBoundary>
             ))}
@@ -124,10 +125,10 @@ function PluginPostInspector() {
     )
 }
 function PluginPostInspectorForEach({ config }: { config: PluginConfig }) {
-    const ref = React.useRef<HTMLDivElement>(null)
+    const ref = useRef<HTMLDivElement>(null)
     const F = config.postInspector
     const post = usePostInfo()
-    React.useEffect(() => {
+    useEffect(() => {
         if (!ref.current || !F || typeof F === 'function') return
         return F.init(post, {}, ref.current)
     }, [F, post])

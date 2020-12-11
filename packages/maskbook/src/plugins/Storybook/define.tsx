@@ -1,11 +1,12 @@
-import type { PluginConfig } from '../plugin'
+import { PluginConfig, PluginStage, PluginScope } from '../types'
 import { registerTypedMessageRenderer, TypedMessage } from '../../protocols/typed-message'
 import type { TypedMessageRendererProps } from '../../components/InjectedComponents/TypedMessageRenderer'
-import React from 'react'
 
 export const StorybookPluginDefine: PluginConfig = {
     pluginName: 'Storybook test',
     identifier: 'storybook.debug',
+    stage: PluginStage.Development,
+    scope: PluginScope.Internal,
     postDialogMetadataBadge: new Map([['test', (payload) => 'a lovely test badge']]),
 }
 if (process.env.STORYBOOK) {

@@ -18,6 +18,10 @@ declare module NodeJS {
          * It DOESN't means the app MUST run in this size.
          */
         readonly resolution: 'desktop' | 'mobile'
+        /**
+         * Which version of Web Extension manifest
+         */
+        readonly manifest: 2 | 3
 
         /**
          * Debug flags
@@ -103,6 +107,28 @@ declare module 'react-middle-ellipsis' {
     export default component
 }
 
+declare module 'react-tilt' {
+    import React from 'react'
+    interface Options {
+        reverse: boolean
+        max: number
+        perspective: number
+        scale: number
+        speed: number
+        transition: boolean
+        axis: 'X' | 'Y' | null
+        glare: boolean
+        'max-glare': number
+        reset: boolean
+        easing: string
+    }
+    interface ComponentProps extends React.HTMLAttributes<HTMLDivElement> {
+        options?: Partial<Options>
+    }
+    const component: (props: ComponentProps) => JSX.Element
+    export default component
+}
+
 declare module 'ethereum-blockies' {
     export interface BlockieOptions {
         seed?: string // seed used to generate icon data, default: random
@@ -115,47 +141,12 @@ declare module 'ethereum-blockies' {
     export function create(options?: BlockieOptions): HTMLCanvasElement
 }
 
-declare module '@transak/transak-sdk' {
-    enum EVENTS {
-        ALL_EVENTS = '*',
-        TRANSAK_WIDGET_INITIALISED = 'TRANSAK_WIDGET_INITIALISED',
-        TRANSAK_WIDGET_OPEN = 'TRANSAK_WIDGET_OPEN',
-        TRANSAK_WIDGET_CLOSE_REQUEST = 'TRANSAK_WIDGET_CLOSE_REQUEST',
-        TRANSAK_WIDGET_CLOSE = 'TRANSAK_WIDGET_CLOSE',
-        TRANSAK_ORDER_CREATED = 'TRANSAK_ORDER_CREATED',
-        TRANSAK_ORDER_CANCELLED = 'TRANSAK_ORDER_CANCELLED',
-        TRANSAK_ORDER_FAILED = 'TRANSAK_ORDER_FAILED',
-        TRANSAK_ORDER_SUCCESSFUL = 'TRANSAK_ORDER_SUCCESSFUL',
-        TRANSAK_ERROR = 'TRANSAK_ERROR',
-    }
+declare module '*.png' {
+    const content: string
+    export default content
+}
 
-    class TransakSDK {
-        constructor(config: TransakSDKConfig) {}
-
-        public on(name: string, callback: Function): void
-        public init(): void
-        public close(): void
-        public closeRequest(): void
-        public modal(): void
-
-        public ALL_EVENTS_EVENTS = EVENTS.ALL
-        public ERROR = EVENTS.TRANSAK_ERROR
-        public EVENTS = EVENTS
-    }
-
-    export interface TransakSDKConfig {
-        apiKey: string
-        environment: 'STAGING' | 'PRODUCTION'
-        defaultCryptoCurrency?: string
-        walletAddress?: string
-        themeColor?: string
-        fiatCurrency?: string
-        email?: string
-        redirectURL: string
-        hostURL: string
-        widgetHeight?: string
-        widgetWidth?: string
-    }
-
-    export default TransakSDK
+declare module '*.jpg' {
+    const content: string
+    export default content
 }
