@@ -1,11 +1,21 @@
 import type BigNumber from 'bignumber.js'
-import type { ERC20TokenDetailed, EtherTokenDetailed } from '../../../web3/types'
+import type { ChainId, ERC20TokenDetailed, EtherTokenDetailed } from '../../../web3/types'
 
 export enum TradeProvider {
     UNISWAP,
     ZRX, // 0x
     // ONE_INCH,
-    // SUSHISWAP,
+    SUSHISWAP,
+    SASHIMISWAP,
+    BALANCER,
+}
+
+export enum WarningLevel {
+    LOW = 1,
+    MEDIUM,
+    HIGH,
+    CONFIRMATION_REQUIRED,
+    BLOCKED,
 }
 
 // ZRX supported source swap list
@@ -37,6 +47,8 @@ export enum ZrxTradePool {
 
 export interface TradeComputed<T = unknown> {
     strategy: TradeStrategy
+    inputToken?: EtherTokenDetailed | ERC20TokenDetailed
+    outputToken?: EtherTokenDetailed | ERC20TokenDetailed
     inputAmount: BigNumber
     outputAmount: BigNumber
     nextMidPrice: BigNumber
@@ -46,7 +58,7 @@ export interface TradeComputed<T = unknown> {
     minimumReceived: BigNumber
     priceImpactWithoutFee: BigNumber
     fee: BigNumber
-    path?: (EtherTokenDetailed | ERC20TokenDetailed)[]
+    path?: (PartialRequired<EtherTokenDetailed, 'address'> | PartialRequired<ERC20TokenDetailed, 'address'>)[][]
     trade_?: T
 }
 
@@ -58,4 +70,19 @@ export enum TradeStrategy {
 export enum TokenPanelType {
     Input,
     Output,
+}
+
+export interface TradeContext {
+    GRAPH_API: string
+    INIT_CODE_HASH: string
+    ROUTER_CONTRACT_ADDRESS: string
+    FACTORY_CONTRACT_ADDRESS: string
+    AGAINST_TOKENS: {
+        [key in ChainId]: ERC20TokenDetailed[]
+    }
+    CUSTOM_TOKENS: {
+        [key in ChainId]?: {
+            [key: string]: ERC20TokenDetailed[]
+        }
+    }
 }

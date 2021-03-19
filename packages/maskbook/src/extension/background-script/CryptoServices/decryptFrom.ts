@@ -8,14 +8,14 @@ import { queryPersonaRecord, queryLocalKey } from '../../../database'
 import { ProfileIdentifier, PostIVIdentifier } from '../../../database/type'
 import { queryPostDB, updatePostDB } from '../../../database/post'
 import { addPerson } from './addPerson'
-import { getNetworkWorker } from '../../../social-network/worker'
+import { getNetworkWorker, getNetworkWorkerUninitialized } from '../../../social-network/worker'
 import { cryptoProviderTable } from './cryptoProviderTable'
 import type { PersonaRecord } from '../../../database/Persona/Persona.db'
 import { verifyOthersProve } from './verifyOthersProve'
 import { publicSharedAESKey } from '../../../crypto/crypto-alpha-38'
 import { DecryptFailedReason } from '../../../utils/constants'
 import { asyncIteratorWithResult, memorizeAsyncGenerator } from '../../../utils/type-transform/asyncIteratorHelpers'
-import { sleep } from '../../../utils/utils'
+import { delay } from '../../../utils/utils'
 import type { EC_Public_JsonWebKey, AESJsonWebKey } from '../../../modules/CryptoAlgorithm/interfaces/utils'
 import { decodeImageUrl } from '../SteganographyService'
 import type { TypedMessage } from '../../../protocols/typed-message'
@@ -24,11 +24,14 @@ import type { SharedAESKeyGun2 } from '../../../network/gun/version.2'
 import { MaskMessage } from '../../../utils/messages'
 import { GunAPI } from '../../../network/gun'
 import { calculatePostKeyPartition } from '../../../network/gun/version.2/hash'
+import { Err, Ok, Result } from 'ts-results'
+import { decodeTextPayloadWorker } from '../../../social-network/utils/text-payload-worker'
 
 type Progress = (
     | { progress: 'finding_person_public_key' | 'finding_post_key' | 'init' | 'decode_post' }
     | { progress: 'intermediate_success'; data: Success }
     | { progress: 'iv_decrypted'; iv: string }
+    | { progress: 'payload_decrypted'; decryptedPayloadForImage: Payload }
 ) & {
     type: 'progress'
     /** if this is true, this progress should not cause UI change. */
@@ -43,6 +46,7 @@ type SuccessThrough = 'author_key_not_found' | 'post_key_cached' | 'normal_decry
 type Success = {
     type: 'success'
     iv: string
+    decryptedPayloadForImage: Payload
     content: TypedMessage
     rawContent: string
     through: SuccessThrough[]
@@ -62,12 +66,14 @@ const successDecryptionCache = new Map<string, Success>()
 const makeSuccessResultF = (
     cacheKey: string,
     iv: string,
+    decryptedPayloadForImage: Payload,
     cryptoProvider: typeof cryptoProviderTable[keyof typeof cryptoProviderTable],
 ) => (rawEncryptedContent: string, through: Success['through']): Success => {
     const success: Success = {
         rawContent: rawEncryptedContent,
         through,
         iv,
+        decryptedPayloadForImage,
         content: cryptoProvider.typedMessageParse(rawEncryptedContent),
         type: 'success',
         internal: false,
@@ -77,7 +83,7 @@ const makeSuccessResultF = (
 }
 
 function makeProgress(
-    progress: Exclude<Progress['progress'], 'intermediate_success' | 'iv_decrypted'> | Success,
+    progress: Exclude<Progress['progress'], 'intermediate_success' | 'iv_decrypted' | 'payload_decrypted'> | Success,
     internal = false,
 ): Progress {
     if (typeof progress === 'string') return { type: 'progress', progress, internal }
@@ -127,8 +133,10 @@ async function* decryptFromPayloadWithProgress_raw(
     if (successDecryptionCache.has(cacheKey)) return successDecryptionCache.get(cacheKey)!
     yield makeProgress('init')
 
-    const authorNetworkWorker = getNetworkWorker(author.network)
-    if (authorNetworkWorker.err) return makeError(authorNetworkWorker.val)
+    const authorNetworkWorker = Result.wrap(() => getNetworkWorkerUninitialized(author.network)).andThen((x) =>
+        x ? Ok(x) : Err(new Error('Worker not found')),
+    )
+    if (authorNetworkWorker.err) return makeError(authorNetworkWorker.val as Error)
 
     const data = post
     const { version } = data
@@ -137,9 +145,10 @@ async function* decryptFromPayloadWithProgress_raw(
     if (version === -40 || version === -39 || version === -38) {
         const { encryptedText, iv, version } = data
         const cryptoProvider = cryptoProviderTable[version]
-        const makeSuccessResult = makeSuccessResultF(cacheKey, iv, cryptoProvider)
+        const makeSuccessResult = makeSuccessResultF(cacheKey, iv, data, cryptoProvider)
         const ownersAESKeyEncrypted = data.version === -38 ? data.AESKeyEncrypted : data.ownersAESKeyEncrypted
 
+        yield { type: 'progress', progress: 'payload_decrypted', decryptedPayloadForImage: data, internal: true }
         yield { type: 'progress', progress: 'iv_decrypted', iv: iv, internal: true }
         // ? Early emit the cache.
         const [cachedPostResult, setPostCache] = await decryptFromCache(data, author)
@@ -168,14 +177,14 @@ async function* decryptFromPayloadWithProgress_raw(
 
         // ? Get my public & private key.
         const queryWhoAmI = () => queryPersonaRecord(whoAmI)
-        const mine = await queryWhoAmI().then((x) => x || sleep(1000).then(queryWhoAmI))
+        const mine = await queryWhoAmI().then((x) => x || delay(1000).then(queryWhoAmI))
         if (!mine?.privateKey) return makeError(DecryptFailedReason.MyCryptoKeyNotFound)
 
         const { publicKey: minePublic, privateKey: minePrivate } = mine
-        const networkWorker = getNetworkWorker(whoAmI)
+        const networkWorker = getNetworkWorkerUninitialized(whoAmI)
         try {
             if (version === -40) throw ''
-            const gunNetworkHint = networkWorker.unwrap().gunNetworkHint
+            const gunNetworkHint = networkWorker!.gunNetworkHint
             const { keyHash, postHash } = await calculatePostKeyPartition(version, iv, minePublic, gunNetworkHint)
             yield { type: 'debug', debug: 'debug_finding_hash', hash: [postHash, keyHash] }
         } catch {}
@@ -199,7 +208,7 @@ async function* decryptFromPayloadWithProgress_raw(
         if (author.equals(whoAmI)) {
             // if the decryption process goes here,
             // that means it is failed to decrypt by local identities.
-            // If remove this if block, Maskbook will search the key
+            // If remove this if block, Mask will search the key
             // for the post even that post by myself.
             if (lastError instanceof DOMException) return handleDOMException(lastError)
             console.error(lastError)
@@ -227,7 +236,7 @@ async function* decryptFromPayloadWithProgress_raw(
                 console.debug(e)
                 // TODO: Replace this error with:
                 // You do not have the necessary private key to decrypt this message.
-                // What to do next: You can ask your friend to visit your profile page, so that their Maskbook extension will detect and add you to recipients.
+                // What to do next: You can ask your friend to visit your profile page, so that their Mask extension will detect and add you to recipients.
                 // ? after the auto-share with friends is done.
                 yield makeError(e)
             } else {
@@ -307,9 +316,9 @@ async function* decryptFromImageUrlWithProgress_raw(
     })
     if (post.indexOf('🎼') !== 0 && !/https:\/\/.+\..+\/(\?PostData_v\d=)?%20(.+)%40/.test(post))
         return makeError(i18n.t('service_decode_image_payload_failed'), true)
-    const worker = getNetworkWorker(author)
-    if (worker.err) return makeError(worker.val)
-    const payload = deconstructPayload(post, worker.val.payloadDecoder)
+    const worker = await Result.wrapAsync(() => getNetworkWorker(author))
+    if (worker.err) return makeError(worker.val as Error)
+    const payload = deconstructPayload(post, await decodeTextPayloadWorker(author))
     if (payload.err) return makeError(payload.val)
     return yield* decryptFromText(payload.val, author, whoAmI, publicShared)
 }

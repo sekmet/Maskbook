@@ -1,5 +1,4 @@
-import { safeGetActiveUI } from '../utils/safeRequire'
-
+/// <reference path="./custom-ui.d.ts" />
 // Priority: classes from props > configHooks > defaultStyles
 export function useStylesExtends<InternalKeys extends string, OverwrittenKeys extends string>(
     defaultStyles: Record<InternalKeys, string>,
@@ -27,10 +26,6 @@ export function mergeClasses<T extends string>(
         }
     }
     return result
-}
-
-export function getCustomUIOverwrite() {
-    return safeGetActiveUI().componentOverwrite || {}
 }
 
 /**

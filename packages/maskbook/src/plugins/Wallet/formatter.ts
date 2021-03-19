@@ -13,6 +13,10 @@ export function formatPrice(price: BigNumber, decimalPlaces: number = 6) {
     return price.decimalPlaces(decimalPlaces).toString()
 }
 
+export function formatAmount(amount: BigNumber, decimals: number) {
+    return amount.multipliedBy(new BigNumber(10).pow(decimals)).toFixed()
+}
+
 export function formatBalance(balance: BigNumber, decimals: number, significant: number = decimals) {
     if (!BigNumber.isBigNumber(balance)) return '0'
     const negative = balance.isNegative() // balance < 0n
@@ -40,7 +44,12 @@ export function formatBalance(balance: BigNumber, decimals: number, significant:
 }
 
 export function formatCurrency(balance: number, sign: string = '$') {
-    return `${sign}${balance.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, `${sign}&,`)}`
+    const fixedBalance = balance > 1 ? balance.toFixed(2) : balance.toPrecision(2)
+    return `${sign}${fixedBalance.replace(/\d(?=(\d{3})+\.)/g, `${sign}&,`)}`
+}
+
+export function formatToken(balance: number) {
+    return formatCurrency(balance).replace('$', '')
 }
 
 export function formatEthereumAddress(address: string, size = 0) {
@@ -96,4 +105,32 @@ export function formatElapsed(from: number) {
     return i18n.t('relative_time_years_ago', {
         years: Math.round(elapsed / msPerYear),
     })
+}
+
+export function formatAmountPrecision(
+    amount: BigNumber,
+    token_decimals?: number,
+    decimalPlaces = 6,
+    precision = 12,
+): string {
+    const _amount = new BigNumber(formatBalance(amount, token_decimals ?? 0))
+    const _decimalPlaces = decimalPlaces < 0 ? 6 : decimalPlaces
+    const _precision = precision < 0 ? 12 : precision
+
+    if (_amount.isZero()) {
+        return '0'
+    }
+
+    if (_amount.isLessThan(1)) {
+        return _amount.toFixed(_precision)
+    }
+
+    const len = _amount.precision() - _amount.decimalPlaces()
+    if (len <= _decimalPlaces) {
+        return _amount.toPrecision(len + _decimalPlaces)
+    } else if (len >= _precision) {
+        return _amount.toPrecision(len)
+    }
+
+    return _amount.toPrecision(_precision)
 }

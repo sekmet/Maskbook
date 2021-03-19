@@ -32,7 +32,7 @@ export { queryProfile, queryProfilePaged } from '../../database'
 export function queryProfiles(network?: string): Promise<Profile[]> {
     return queryProfilesWithQuery(network)
 }
-export async function queryMyProfiles(network?: string) {
+export async function queryMyProfiles(network?: string): Promise<Profile[]> {
     const myPersonas = (await queryMyPersonas(network)).filter((x) => !x.uninitialized)
     return Promise.all(
         myPersonas
@@ -134,7 +134,7 @@ export { detachProfileDB as detachProfile } from '../../database/Persona/Persona
 //#endregion
 
 /**
- * In older version of Maskbook, identity is marked as `ProfileIdentifier(network, '$unknown')` or `ProfileIdentifier(network, '$self')`. After upgrading to the newer version of Maskbook, Maskbook will try to find the current user in that network and call this function to replace old identifier into a "resolved" identity.
+ * In older version of Mask, identity is marked as `ProfileIdentifier(network, '$unknown')` or `ProfileIdentifier(network, '$self')`. After upgrading to the newer version of Mask, Mask will try to find the current user in that network and call this function to replace old identifier into a "resolved" identity.
  * @param identifier The resolved identity
  */
 export async function resolveIdentity(identifier: ProfileIdentifier): Promise<void> {

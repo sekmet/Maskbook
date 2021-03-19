@@ -4,9 +4,13 @@ name: E2E
 # events but only for the master branch
 on:
   push:
-    branches: [master, released]
+    # branches: [master, released]
+    branches-ignore:
+      - '**'
   pull_request:
-    branches: [master, released]
+    # branches: [master, released]
+    branches-ignore:
+      - '**'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -18,7 +22,7 @@ jobs:
 
       # more: https://github.community/t5/GitHub-Actions/How-to-run-action-as-a-non-root-user/m-p/45733/highlight/true#M6330
       options: '--user 1000
-        -v /home/ubuntu/.cache/npm:/github/home/.npm
+        -v /home/ubuntu/.cache/pnpm:/github/home/.pnpm
         -v /home/ubuntu/.cache/alice_home:/tmp/alice_home
         -v /home/ubuntu/.cache/bob_home:/tmp/bob_home
         -v /home/ubuntu/.e2e/e2e-test:/tmp/e2e-test'
@@ -33,11 +37,19 @@ jobs:
       # @v2 requires too much configurations
       - uses: actions/checkout@v1
 
-      - name: Install Dependencies
-        run: npm ci
+      - uses: actions/cache@v2
+        with:
+          path: ~/.pnpm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - run: sudo npm i -g pnpm
+      - run: npm run ci
+      # Install puppeteer requires download a browser when installing which is noisy. Let's move it to CI only
+      - run: pnpm i --no-lockfile -w puppeteer@5.5.0
 
       - name: Build
-        run: npx build E2E
+        run: npm run build-e2e
 
       - name: Setup E2E
         run: |

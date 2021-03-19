@@ -1,6 +1,8 @@
-import { makeStyles, Typography, ThemeProvider } from '@material-ui/core'
-import { getActivatedUI } from '../social-network/ui'
+import { makeStyles, Typography, ThemeProvider, SnackbarContent } from '@material-ui/core'
+import { activatedSocialNetworkUI } from '../social-network'
 import { MaskbookIcon } from '../resources/MaskbookIcon'
+import { Suspense, useRef } from 'react'
+import { isTwitter } from '../social-network-adaptor/twitter.com/base'
 
 interface PluginWrapperProps {
     pluginName: string
@@ -9,7 +11,6 @@ interface PluginWrapperProps {
 }
 
 const useStyles = makeStyles((theme) => {
-    const network = getActivatedUI()?.networkIdentifier
     return {
         card: {
             marginTop: theme.spacing(1),
@@ -17,7 +18,7 @@ const useStyles = makeStyles((theme) => {
             boxSizing: 'border-box',
             border: `1px solid ${theme.palette.divider}`,
             cursor: 'default',
-            ...(network === 'twitter.com'
+            ...(isTwitter(activatedSocialNetworkUI)
                 ? {
                       borderRadius: 15,
                       overflow: 'hidden',
@@ -50,18 +51,25 @@ const useStyles = makeStyles((theme) => {
 export default function MaskbookPluginWrapper(props: PluginWrapperProps) {
     const classes = useStyles()
     const { pluginName, children } = props
-    return (
-        <ThemeProvider theme={getActivatedUI().useTheme()}>
-            <div className={classes.card} onClick={(ev) => ev.stopPropagation()}>
-                <div className={classes.header}>
-                    <MaskbookIcon className={classes.icon}></MaskbookIcon>
-                    <div className={classes.title}>
-                        <Typography variant="overline">Maskbook Plugin</Typography>
-                        <Typography variant="h6">{pluginName}</Typography>
-                    </div>
+    const useStableTheme = useRef(activatedSocialNetworkUI.customization.useTheme).current
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const theme = useStableTheme?.()
+
+    const inner = (
+        <div className={classes.card} onClick={(ev) => ev.stopPropagation()}>
+            <div className={classes.header}>
+                <MaskbookIcon className={classes.icon}></MaskbookIcon>
+                <div className={classes.title}>
+                    <Typography variant="overline">Mask Plugin</Typography>
+                    <Typography variant="h6">{pluginName}</Typography>
                 </div>
-                <div className={classes.body}>{children}</div>
             </div>
-        </ThemeProvider>
+            <div className={classes.body}>{children}</div>
+        </div>
+    )
+    return (
+        <Suspense fallback={<SnackbarContent message="Mask is loading this plugin..." />}>
+            {theme ? <ThemeProvider theme={theme}>{inner}</ThemeProvider> : inner}
+        </Suspense>
     )
 }

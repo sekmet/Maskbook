@@ -1,26 +1,24 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useAsyncRetry, useTimeoutFn } from 'react-use'
 import { makeStyles, createStyles } from '@material-ui/core'
 import type { Trade } from '@uniswap/sdk'
+import { v4 as uuid } from 'uuid'
+
 import { useStylesExtends } from '../../../../components/custom-ui-helper'
-import { ERC20TokenDetailed, EthereumTokenType, EtherTokenDetailed } from '../../../../web3/types'
-import { useConstant } from '../../../../web3/hooks/useConstant'
+import { ERC20TokenDetailed, EthereumTokenType, EtherTokenDetailed, ChainId } from '../../../../web3/types'
 import { TradeForm } from './TradeForm'
-import { TradeRoute } from '../uniswap/TradeRoute'
+import { TradeRoute as UniswapTradeRoute } from '../uniswap/TradeRoute'
+import { TradeRoute as BalancerTradeRoute } from '../balancer/TradeRoute'
 import { TradeSummary } from '../trader/TradeSummary'
 import { ConfirmDialog } from './ConfirmDialog'
-import { useERC20TokenApproveCallback, ApproveState } from '../../../../web3/hooks/useERC20TokenApproveCallback'
+import { useERC20TokenApproveCallback, ApproveStateType } from '../../../../web3/hooks/useERC20TokenApproveCallback'
 import { useTradeApproveComputed } from '../../trader/useTradeApproveComputed'
 import { TradeActionType } from '../../trader/useTradeState'
-import { TokenPanelType, TradeComputed, TradeProvider } from '../../types'
-import { CONSTANTS } from '../../../../web3/constants'
+import { SwapResponse, TokenPanelType, TradeComputed, TradeProvider, Coin } from '../../types'
 import { TRADE_CONSTANTS } from '../../constants'
-import { sleep } from '../../../../utils/utils'
+import { delay } from '../../../../utils/utils'
 import { TransactionStateType } from '../../../../web3/hooks/useTransactionState'
-import { SelectERC20TokenDialog } from '../../../../web3/UI/SelectERC20TokenDialog'
 import { useRemoteControlledDialog } from '../../../../utils/hooks/useRemoteControlledDialog'
-import { WalletMessages } from '../../../Wallet/messages'
-import { useShareLink } from '../../../../utils/hooks/useShareLink'
-import { useTokenDetailed } from '../../../../web3/hooks/useTokenDetailed'
 import { formatBalance } from '../../../Wallet/formatter'
 import { TradePairViewer } from '../uniswap/TradePairViewer'
 import { useValueRef } from '../../../../utils/hooks/useValueRef'
@@ -28,7 +26,15 @@ import { currentTradeProviderSettings } from '../../settings'
 import { useTradeCallback } from '../../trader/useTradeCallback'
 import { useTradeStateComputed } from '../../trader/useTradeStateComputed'
 import { useTokenBalance } from '../../../../web3/hooks/useTokenBalance'
-import { getActivatedUI } from '../../../../social-network/ui'
+import { activatedSocialNetworkUI } from '../../../../social-network'
+import { EthereumMessages } from '../../../Ethereum/messages'
+import Services from '../../../../extension/service'
+import { UST } from '../../constants'
+import { SelectTokenDialogEvent, WalletMessages } from '../../../Wallet/messages'
+import { useChainId } from '../../../../web3/hooks/useChainState'
+import { createERC20Token, createEtherToken } from '../../../../web3/helpers'
+import { PluginTraderRPC } from '../../messages'
+import { isTwitter } from '../../../../social-network-adaptor/twitter.com/base'
 
 const useStyles = makeStyles((theme) => {
     return createStyles({
@@ -50,16 +56,15 @@ const useStyles = makeStyles((theme) => {
     })
 })
 
-export interface TraderProps extends withClasses<KeysInferFromUseStyles<typeof useStyles>> {
-    address: string
-    name: string
-    symbol: string
+export interface TraderProps extends withClasses<never> {
+    coin: Coin
+    tokenDetailed: ERC20TokenDetailed | EtherTokenDetailed | undefined
 }
 
 export function Trader(props: TraderProps) {
-    const ETH_ADDRESS = useConstant(CONSTANTS, 'ETH_ADDRESS')
-
-    const { address, name, symbol } = props
+    const { coin, tokenDetailed } = props
+    const { decimals } = tokenDetailed ?? coin
+    const chainId = useChainId()
     const classes = useStylesExtends(useStyles(), props)
 
     const provider = useValueRef(currentTradeProviderSettings)
@@ -71,39 +76,18 @@ export function Trader(props: TraderProps) {
     } = useTradeStateComputed(provider)
     const { inputToken, outputToken } = tradeStore
 
-    const [inputTokenAddress, setInputTokenAddress] = useState(ETH_ADDRESS)
-    const [outputTokenAddress, setOutputTokenAddress] = useState(address === ETH_ADDRESS ? '' : address)
-
-    const isEtherInput = inputTokenAddress === ETH_ADDRESS
-    const isEtherOutput = outputTokenAddress === ETH_ADDRESS
-
-    const asyncInputTokenDetailed = useTokenDetailed(
-        isEtherInput ? EthereumTokenType.Ether : EthereumTokenType.ERC20,
-        isEtherInput ? ETH_ADDRESS : inputTokenAddress,
-        {
-            name,
-            symbol,
-        },
-    )
-    const asyncOutputTokenDetailed = useTokenDetailed(
-        isEtherOutput ? EthereumTokenType.Ether : EthereumTokenType.ERC20,
-        isEtherOutput ? ETH_ADDRESS : outputTokenAddress,
-        {
-            name,
-            symbol,
-        },
-    )
-
     useEffect(() => {
         dispatchTradeStore({
             type: TradeActionType.UPDATE_INPUT_TOKEN,
-            token: asyncInputTokenDetailed.value,
+            token: chainId === ChainId.Mainnet && coin.is_mirrored ? UST : createEtherToken(chainId),
         })
         dispatchTradeStore({
             type: TradeActionType.UPDATE_OUTPUT_TOKEN,
-            token: asyncOutputTokenDetailed.value,
+            token: coin.eth_address
+                ? createERC20Token(chainId, coin.eth_address!, decimals ?? 0, coin.name ?? '', coin.symbol ?? '')
+                : undefined,
         })
-    }, [asyncInputTokenDetailed.value, asyncOutputTokenDetailed.value])
+    }, [coin, chainId, decimals])
     //#endregion
 
     //#region switch tokens
@@ -174,49 +158,39 @@ export function Trader(props: TraderProps) {
     const trade = freezed ? tradeCached_.current : tradeComputed
     //#endregion
 
-    //#region select erc20 tokens
+    //#region select token
     const excludeTokens = [inputToken, outputToken].filter(Boolean).map((x) => x?.address) as string[]
-    const [openSelectERC20TokenDialog, setOpenSelectERC20TokenDialog] = useState(false)
-    const [focusedTokenPanelType, setfocusedTokenPanelType] = useState(TokenPanelType.Input)
-    const onTokenChipClick = useCallback((type: TokenPanelType) => {
-        setOpenSelectERC20TokenDialog(true)
-        setfocusedTokenPanelType(type)
-    }, [])
-    const onSelectERC20TokenDialogClose = useCallback(() => {
-        setOpenSelectERC20TokenDialog(false)
-    }, [])
-    const onSelectERC20TokenDialogSubmit = useCallback(
-        (token: EtherTokenDetailed | ERC20TokenDetailed) => {
-            dispatchTradeStore({
-                type:
-                    focusedTokenPanelType === TokenPanelType.Input
-                        ? TradeActionType.UPDATE_INPUT_TOKEN
-                        : TradeActionType.UPDATE_OUTPUT_TOKEN,
-                token,
+    const [focusedTokenPanelType, setFocusedTokenPanelType] = useState(TokenPanelType.Input)
+    const [, setSelectTokenDialogOpen] = useRemoteControlledDialog(
+        WalletMessages.events.selectTokenDialogUpdated,
+        useCallback(
+            (ev: SelectTokenDialogEvent) => {
+                if (ev.open || !ev.token || ev.uuid !== String(focusedTokenPanelType)) return
+                dispatchTradeStore({
+                    type:
+                        focusedTokenPanelType === TokenPanelType.Input
+                            ? TradeActionType.UPDATE_INPUT_TOKEN
+                            : TradeActionType.UPDATE_OUTPUT_TOKEN,
+                    token: ev.token,
+                })
+            },
+            [dispatchTradeStore, focusedTokenPanelType],
+        ),
+    )
+    const onTokenChipClick = useCallback(
+        (type: TokenPanelType) => {
+            setFocusedTokenPanelType(type)
+            setSelectTokenDialogOpen({
+                open: true,
+                uuid: String(type),
+                disableEther: false,
+                FixedTokenListProps: {
+                    selectedTokens: excludeTokens,
+                },
             })
-            onSelectERC20TokenDialogClose()
         },
-        [focusedTokenPanelType, onSelectERC20TokenDialogClose],
+        [excludeTokens.join()],
     )
-    //#endregion
-
-    //#region approve
-    const RouterV2Address = useConstant(TRADE_CONSTANTS, 'ROUTER_V2_ADDRESS')
-    const { approveToken, approveAmount } = useTradeApproveComputed(trade, inputToken)
-    const [approveState, approveCallback] = useERC20TokenApproveCallback(
-        approveToken?.address ?? '',
-        approveAmount,
-        RouterV2Address,
-    )
-    const onApprove = useCallback(async () => {
-        if (approveState !== ApproveState.NOT_APPROVED) return
-        await approveCallback()
-    }, [approveState])
-
-    const onExactApprove = useCallback(async () => {
-        if (approveState !== ApproveState.NOT_APPROVED) return
-        await approveCallback(true)
-    }, [approveState])
     //#endregion
 
     //#region blocking (swap)
@@ -224,7 +198,7 @@ export function Trader(props: TraderProps) {
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
     const onConfirmDialogConfirm = useCallback(async () => {
         setOpenConfirmDialog(false)
-        await sleep(100)
+        await delay(100)
         setFreezed(true)
         await tradeCallback()
     }, [tradeCallback])
@@ -233,24 +207,47 @@ export function Trader(props: TraderProps) {
     }, [])
     //#endregion
 
+    //#region refresh pools
+    const { error: updateBalancerPoolsError, loading: updateBalancerPoolsLoading } = useAsyncRetry(async () => {
+        // force update balancer's pools each time user enters into the swap tab
+        if (provider === TradeProvider.BALANCER) await PluginTraderRPC.updatePools(true)
+    }, [provider])
+    //#endregion
+
+    //#region refresh pairs
+    const [, , resetTimeout] = useTimeoutFn(() => {
+        // FIXME:
+        // failed to update onRefreshClick callback
+        onRefreshClick()
+    }, 30 /* seconds */ * 1000 /* milliseconds */)
+
+    const onRefreshClick = useCallback(async () => {
+        await Services.Ethereum.updateChainState()
+        asyncTradeComputed.retry()
+        resetTimeout()
+    }, [asyncTradeComputed.retry, resetTimeout])
+    //#endregion
+
     //#region remote controlled transaction dialog
-    const cashTag = getActivatedUI()?.networkIdentifier === 'twitter.com' ? '$' : ''
-    const shareLink = useShareLink(
-        trade && inputToken && outputToken
-            ? [
-                  `I just swapped ${formatBalance(trade.inputAmount, inputToken.decimals ?? 0, 6)} ${cashTag}${
-                      inputToken.symbol
-                  } for ${formatBalance(trade.outputAmount, outputToken.decimals ?? 0, 6)} ${cashTag}${
-                      outputToken.symbol
-                  }. Follow @realMaskbook (mask.io) to swap cryptocurrencies on Twitter.`,
-                  '#mask_io',
-              ].join('\n')
-            : '',
-    )
+    const cashTag = isTwitter(activatedSocialNetworkUI) ? '$' : ''
+    const shareLink = activatedSocialNetworkUI.utils
+        .getShareLinkURL?.(
+            trade && inputToken && outputToken
+                ? [
+                      `I just swapped ${formatBalance(trade.inputAmount, inputToken.decimals ?? 0, 6)} ${cashTag}${
+                          inputToken.symbol
+                      } for ${formatBalance(trade.outputAmount, outputToken.decimals ?? 0, 6)} ${cashTag}${
+                          outputToken.symbol
+                      }. Follow @realMaskbook (mask.io) to swap cryptocurrencies on Twitter.`,
+                      '#mask_io',
+                  ].join('\n')
+                : '',
+        )
+        .toString()
 
     // close the transaction dialog
     const [_, setTransactionDialogOpen] = useRemoteControlledDialog(
-        WalletMessages.events.transactionDialogUpdated,
+        EthereumMessages.events.transactionDialogUpdated,
         (ev) => {
             if (ev.open) return
             setFreezed(false)
@@ -288,10 +285,10 @@ export function Trader(props: TraderProps) {
     return (
         <div className={classes.root}>
             <TradeForm
-                approveState={approveState}
                 trade={trade}
+                provider={provider}
                 strategy={strategy}
-                loading={asyncTradeComputed.loading}
+                loading={asyncTradeComputed.loading || updateBalancerPoolsLoading}
                 inputToken={inputToken}
                 outputToken={outputToken}
                 inputTokenBalance={inputTokenBalance}
@@ -301,9 +298,8 @@ export function Trader(props: TraderProps) {
                 onInputAmountChange={onInputAmountChange}
                 onOutputAmountChange={onOutputAmountChange}
                 onReverseClick={onReverseClick}
+                onRefreshClick={onRefreshClick}
                 onTokenChipClick={onTokenChipClick}
-                onApprove={onApprove}
-                onExactApprove={onExactApprove}
                 onSwap={() => setOpenConfirmDialog(true)}
             />
             {trade && inputToken && outputToken ? (
@@ -324,20 +320,20 @@ export function Trader(props: TraderProps) {
                         inputToken={inputToken}
                         outputToken={outputToken}
                     />
-                    {provider === TradeProvider.UNISWAP ? (
-                        <>
-                            <TradeRoute classes={{ root: classes.router }} trade={trade} />
-                            <TradePairViewer trade={trade as TradeComputed<Trade>} />
-                        </>
+                    {[TradeProvider.UNISWAP, TradeProvider.SUSHISWAP, TradeProvider.SASHIMISWAP].includes(provider) ? (
+                        <UniswapTradeRoute classes={{ root: classes.router }} trade={trade} />
+                    ) : null}
+                    {[TradeProvider.BALANCER].includes(provider) ? (
+                        <BalancerTradeRoute
+                            classes={{ root: classes.router }}
+                            trade={trade as TradeComputed<SwapResponse>}
+                        />
+                    ) : null}
+                    {[TradeProvider.UNISWAP, TradeProvider.SUSHISWAP, TradeProvider.SASHIMISWAP].includes(provider) ? (
+                        <TradePairViewer trade={trade as TradeComputed<Trade>} provider={provider} />
                     ) : null}
                 </>
             ) : null}
-            <SelectERC20TokenDialog
-                open={openSelectERC20TokenDialog}
-                excludeTokens={excludeTokens}
-                onSubmit={onSelectERC20TokenDialogSubmit}
-                onClose={onSelectERC20TokenDialogClose}
-            />
         </div>
     )
 }

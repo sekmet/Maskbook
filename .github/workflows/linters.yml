@@ -9,7 +9,7 @@ on:
 jobs:
   linters:
     runs-on: ubuntu-20.04
-    continue-on-error: false
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v2
         with:
@@ -17,22 +17,30 @@ jobs:
       - uses: actions/setup-node@v2-beta
       - uses: actions/cache@v2
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.pnpm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - run: sudo npm i -g npm@7
-      - run: npm ci
-      - run: npx prettier --check .
-      - run: npx tsc --noEmit
+      - run: sudo npm install --global pnpm
+      - run: pnpm ci
+      - run: npx build -- echo "Check tsc"
+      - run: npx locale-kit
       - run: npm run lint:typecoverage
-      - run: npm run locale-kit
+        working-directory: packages/maskbook
       - run: npm run lint:report
       - name: Upload ESLint Report
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: eslint
           path: ./reports/junit
+  prettier:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v2-beta
+      - run: npx prettier --list-different .
   storybook:
     runs-on: ubuntu-20.04
     continue-on-error: false
@@ -43,14 +51,9 @@ jobs:
       - uses: actions/setup-node@v2-beta
       - uses: actions/cache@v2
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.pnpm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - run: sudo npm i -g npm@7
-      - run: npm ci
-      - run: npm run build-storybook
-      - uses: actions/upload-artifact@v1
-        with:
-          name: storybook
-          path: ./storybook-static
+      - run: sudo npm i -g pnpm
+      - run: npm run ci

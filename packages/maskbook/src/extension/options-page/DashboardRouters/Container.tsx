@@ -1,7 +1,6 @@
 import { cloneElement } from 'react'
 import { makeStyles, createStyles, Typography, Divider, Fade, Fab, PropTypes } from '@material-ui/core'
 import classNames from 'classnames'
-import { getUrl } from '../../../utils/utils'
 import { useMatchXS } from '../../../utils/hooks/useMatchXS'
 import { Flags } from '../../../utils/flags'
 
@@ -40,9 +39,10 @@ const useStyles = makeStyles((theme) => {
     return createStyles<string, { isSetup: boolean }>({
         wrapper: {
             flex: 1,
+            width: '100%',
             height: '100%',
             [theme.breakpoints.up('sm')]: {
-                display: 'grid',
+                display: Flags.has_native_nav_bar ? 'inline' : 'grid',
                 gridTemplateRows: (props) => (props.isSetup ? '1fr' : '[titleAction] 0fr [divider] 0fr [content] auto'),
             },
         },
@@ -56,9 +56,11 @@ const useStyles = makeStyles((theme) => {
             backgroundSize: '185px 128px',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center center',
-            backgroundImage: `url(${getUrl(
-                theme.palette.mode === 'light' ? 'dashboard-placeholder.png' : 'dashboard-placeholder-dark.png',
-            )})`,
+            backgroundImage: `url(${
+                theme.palette.mode === 'light'
+                    ? new URL('./dashboard-placeholder.png', import.meta.url)
+                    : new URL('./dashboard-placeholder-dark.png', import.meta.url)
+            })`,
             [theme.breakpoints.down('sm')]: {
                 backgroundSize: '100px 70px',
             },
@@ -113,6 +115,9 @@ const useStyles = makeStyles((theme) => {
             flexDirection: 'column',
             overflow: 'hidden',
             position: 'relative',
+            [theme.breakpoints.down('sm')]: {
+                height: '100vh',
+            },
         },
         contentPadded: {
             '& > *': {

@@ -5,10 +5,10 @@ import { useState } from 'react'
 import { useBeforeUnload } from 'react-use'
 import { useStylesExtends } from '../../components/custom-ui-helper'
 import { InjectedDialog } from '../../components/shared/InjectedDialog'
-import { editActivatedPostMetadata } from '../../social-network/ui'
+import { editActivatedPostMetadata } from '../../protocols/typed-message/global-state'
 import { useI18N } from '../../utils/i18n-next-ui'
 import { Entry } from './components'
-import { META_KEY_1 } from './constants'
+import { META_KEY_2 } from './constants'
 import { Exchange } from './hooks/Exchange'
 import type { FileInfo } from './types'
 
@@ -46,9 +46,9 @@ const FileServiceDialog: React.FC<Props> = (props) => {
         editActivatedPostMetadata((next) => {
             if (selectedFileInfo) {
                 // Make a Date become string
-                next.set(META_KEY_1, JSON.parse(JSON.stringify(selectedFileInfo)))
+                next.set(META_KEY_2, JSON.parse(JSON.stringify(selectedFileInfo)))
             } else {
-                next.delete(META_KEY_1)
+                next.delete(META_KEY_2)
             }
         })
         props.onConfirm(selectedFileInfo)

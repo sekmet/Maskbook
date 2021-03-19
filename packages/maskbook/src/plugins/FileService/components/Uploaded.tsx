@@ -7,7 +7,7 @@ import { useI18N } from '../../../utils/i18n-next-ui'
 import { FileRouter } from '../constants'
 import { useExchange } from '../hooks/Exchange'
 import type { FileInfo } from '../types'
-import { formatDateTime } from '../utils'
+import { formatDateTime } from '../../../utils/date'
 import { FileName } from './FileName'
 
 const useStyles = makeStyles({
@@ -74,7 +74,7 @@ export const Uploaded: React.FC = () => {
             </Grid>
             <Grid item>
                 <FileName name={state.name} />
-                <Typography className={classes.meta}>
+                <Typography component="section" className={classes.meta}>
                     <p className={classes.info}>
                         <span>{formatFileSize(state.size)}</span>
                         <span>{'  '}</span>

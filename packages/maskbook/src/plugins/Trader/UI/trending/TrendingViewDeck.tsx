@@ -1,16 +1,16 @@
 import { useCallback } from 'react'
 import {
-    makeStyles,
     Avatar,
-    Typography,
-    CardHeader,
-    CardContent,
-    CardActions,
-    createStyles,
-    Link,
-    Paper,
     Button,
+    CardActions,
+    CardContent,
+    CardHeader,
+    createStyles,
     IconButton,
+    Link,
+    makeStyles,
+    Paper,
+    Typography,
 } from '@material-ui/core'
 import MonetizationOnOutlinedIcon from '@material-ui/icons/MonetizationOnOutlined'
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown'
@@ -41,6 +41,9 @@ import {
 } from '../../settings'
 import { CoinMenu, CoinMenuOption } from './CoinMenu'
 import { useValueRef } from '../../../../utils/hooks/useValueRef'
+import { useTransakAllowanceCoin } from '../../../Transak/hooks/useTransakAllowanceCoin'
+import { useApprovedTokens } from '../../trending/useApprovedTokens'
+import { CoinSaftyAlert } from './CoinSaftyAlert'
 
 const useStyles = makeStyles((theme) => {
     return createStyles({
@@ -92,14 +95,8 @@ const useStyles = makeStyles((theme) => {
             right: 0,
             position: 'absolute',
         },
-        tabs: {
-            height: 35,
-            width: '100%',
-            minHeight: 'unset',
-        },
-        tab: {
-            minHeight: 'unset',
-            minWidth: 'unset',
+        arrowIcon: {
+            color: theme.palette.text.primary,
         },
         rank: {
             color: theme.palette.text.secondary,
@@ -119,6 +116,7 @@ const useStyles = makeStyles((theme) => {
             },
         },
         footMenu: {
+            color: theme.palette.text.secondary,
             fontSize: 10,
             display: 'flex',
             alignItems: 'center',
@@ -132,12 +130,6 @@ const useStyles = makeStyles((theme) => {
         avatarFallback: {
             width: 40,
             height: 40,
-        },
-        currency: {
-            marginRight: theme.spacing(1),
-        },
-        percentage: {
-            marginLeft: theme.spacing(1),
         },
         maskbook: {
             width: 40,
@@ -179,6 +171,7 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
 
     //#region buy
     const account = useAccount()
+    const isAllowanceCoin = useTransakAllowanceCoin(coin)
     const [, setBuyDialogOpen] = useRemoteControlledDialog(PluginTransakMessages.events.buyTokenDialogUpdated)
 
     const onBuyButtonClicked = useCallback(() => {
@@ -211,6 +204,9 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
     )
     //#endregion
 
+    const dataProviderOptions = getEnumAsArray(DataProvider)
+    const tradeProviderOptions = getEnumAsArray(TradeProvider)
+    const { approvedTokens, onApprove } = useApprovedTokens(trending.coin.eth_address)
     return (
         <TrendingCard {...TrendingCardProps}>
             <CardHeader
@@ -246,13 +242,13 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                                 }))}
                                 selectedIndex={coins.findIndex((x) => x.id === coin.id)}
                                 onChange={onCoinMenuChange}>
-                                <IconButton size="small">
+                                <IconButton className={classes.arrowIcon} size="small">
                                     <ArrowDropDownIcon />
                                 </IconButton>
                             </CoinMenu>
                         ) : null}
 
-                        {account && trending.coin.symbol && Flags.transak_enabled ? (
+                        {account && trending.coin.symbol && isAllowanceCoin && Flags.transak_enabled ? (
                             <Button
                                 className={classes.buy}
                                 startIcon={<MonetizationOnOutlinedIcon />}
@@ -276,9 +272,9 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                                     ) : null}
                                     <span>
                                         {formatCurrency(
-                                            dataProvider === DataProvider.COIN_MARKET_CAP
+                                            (dataProvider === DataProvider.COIN_MARKET_CAP
                                                 ? last(stats)?.[1] ?? market.current_price
-                                                : market.current_price,
+                                                : market.current_price) ?? 0,
                                             currency.symbol,
                                         )}
                                     </span>
@@ -295,6 +291,7 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                 disableTypography
             />
             <CardContent className={classes.content}>
+                {dataProvider === DataProvider.UNISWAP_INFO && <CoinSaftyAlert coin={trending.coin} />}
                 <Paper className={classes.body} elevation={0}>
                     {children}
                 </Paper>
@@ -308,7 +305,7 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                         color="textSecondary"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Mask Network"
+                        title="Mask"
                         href="https://mask.io">
                         <MaskbookTextIcon classes={{ root: classes.maskbook }} viewBox="0 0 80 20" />
                     </Link>
@@ -317,7 +314,7 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                     <div className={classes.footMenu}>
                         <Typography className={classes.footnote}>Data Source</Typography>
                         <FootnoteMenu
-                            options={getEnumAsArray(DataProvider).map((x) => ({
+                            options={dataProviderOptions.map((x) => ({
                                 name: (
                                     <>
                                         <DataProviderIcon provider={x.value} />
@@ -326,16 +323,17 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                                 ),
                                 value: x.value,
                             }))}
-                            selectedIndex={findIndex(getEnumAsArray(DataProvider), (x) => x.value === dataProvider)}
+                            selectedIndex={findIndex(dataProviderOptions, (x) => x.value === dataProvider)}
                             onChange={onDataProviderChange}
                         />
+                        <ArrowDropDownIcon />
                     </div>
                 ) : null}
                 {showTradeProviderIcon ? (
                     <div className={classes.footMenu}>
                         <Typography className={classes.footnote}>Supported by</Typography>
                         <FootnoteMenu
-                            options={getEnumAsArray(TradeProvider).map((x) => ({
+                            options={tradeProviderOptions.map((x) => ({
                                 name: (
                                     <>
                                         <TradeProviderIcon provider={x.value} />
@@ -345,8 +343,9 @@ export function TrendingViewDeck(props: TrendingViewDeckProps) {
                                 value: x.value,
                             }))}
                             selectedIndex={findIndex(getEnumAsArray(TradeProvider), (x) => x.value === tradeProvider)}
-                            onChange={onTradeProviderChange}
-                        />
+                            onChange={onTradeProviderChange}>
+                            <ArrowDropDownIcon />
+                        </FootnoteMenu>
                     </div>
                 ) : null}
             </CardActions>

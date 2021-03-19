@@ -1,4 +1,4 @@
-import type createMetaMaskProvider from 'metamask-extension-provider'
+import type createMetaMaskProvider from '@dimensiondev/metamask-extension-provider'
 
 export enum ProviderType {
     Maskbook = 'Maskbook',
@@ -10,8 +10,8 @@ export enum CurrencyType {
     USD = 'usd',
 }
 
-export interface MetaMaskInpageProvider extends ReturnType<typeof createMetaMaskProvider> {
-    _metamask?: { isUnlocked: () => Promise<boolean> }
+export interface MetaMaskInpageProvider extends UnboxPromise<ReturnType<typeof createMetaMaskProvider>> {
+    _metamask: { isUnlocked: () => Promise<boolean> }
 }
 
 //#region Ether
@@ -38,7 +38,7 @@ export interface ERC20Token {
 export interface ERC20TokenDetailed extends ERC20Token {
     name?: string
     symbol?: string
-    decimals?: number
+    decimals: number
 }
 //#endregion
 
@@ -65,6 +65,10 @@ export type TokenDetailedType<T extends EthereumTokenType> = TokenDetailedMap[T]
 
 export interface AssetDetailed {
     token: EtherTokenDetailed | ERC20TokenDetailed
+    /**
+     * The chain name of assets
+     */
+    chain: 'eth' | string
     /**
      * The total balance of token
      */
@@ -100,6 +104,7 @@ export enum EthereumNetwork {
     Ropsten = 'Ropsten',
     Rinkeby = 'Rinkeby',
     Kovan = 'Kovan',
+    Gorli = 'Gorli',
 }
 
 export enum EthereumTokenType {

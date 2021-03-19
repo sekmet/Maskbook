@@ -15,6 +15,7 @@ export function useAvailabilityComputed(account: string, payload: RedPacketJSONP
     const asyncResult = useAvailability(account, payload?.rpid)
 
     const { value: availability } = asyncResult
+
     if (!availability)
         return {
             ...asyncResult,

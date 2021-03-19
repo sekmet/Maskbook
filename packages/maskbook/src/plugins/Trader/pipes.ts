@@ -1,15 +1,15 @@
 import type BigNumber from 'bignumber.js'
-import { Currency, DataProvider, TradeProvider, ZrxTradePool } from './types'
+import { Currency, DataProvider, TradeProvider, WarningLevel, ZrxTradePool } from './types'
 import { unreachable } from '../../utils/utils'
-import { WarningLevel } from './types/uniswap'
 import {
     BIPS_BASE,
-    UNISWAP_PRICE_IMPACT_HIGH,
-    UNISWAP_PRICE_IMPACT_LOW,
-    UNISWAP_PRICE_IMPACT_MEDIUM,
-    UNISWAP_PRICE_IMPACT_NON_EXPERT_BLOCKED,
-    UNISWAP_PRICE_IMPACT_WITHOUT_FEE_CONFIRM_MIN,
+    PRICE_IMPACT_HIGH,
+    PRICE_IMPACT_LOW,
+    PRICE_IMPACT_MEDIUM,
+    PRICE_IMPACT_NON_EXPERT_BLOCKED,
+    PRICE_IMPACT_WITHOUT_FEE_CONFIRM_MIN,
 } from './constants'
+import type { ERC20TokenDetailed, EtherTokenDetailed } from '../../web3/types'
 
 export function resolveCurrencyName(currency: Currency) {
     return [
@@ -25,6 +25,8 @@ export function resolveDataProviderName(dataProvider: DataProvider) {
             return 'CoinGecko'
         case DataProvider.COIN_MARKET_CAP:
             return 'CoinMarketCap'
+        case DataProvider.UNISWAP_INFO:
+            return 'Uniswap Info'
         default:
             unreachable(dataProvider)
     }
@@ -36,6 +38,8 @@ export function resolveDataProviderLink(dataProvider: DataProvider) {
             return 'https://www.coingecko.com/'
         case DataProvider.COIN_MARKET_CAP:
             return 'https://coinmarketcap.com/'
+        case DataProvider.UNISWAP_INFO:
+            return 'https://info.uniswap.org/'
         default:
             unreachable(dataProvider)
     }
@@ -47,6 +51,12 @@ export function resolveTradeProviderName(tradeProvider: TradeProvider) {
             return 'Uniswap V2'
         case TradeProvider.ZRX:
             return '0x'
+        case TradeProvider.SUSHISWAP:
+            return 'SushiSwap'
+        case TradeProvider.SASHIMISWAP:
+            return 'SashimiSwap'
+        case TradeProvider.BALANCER:
+            return 'Balancer'
         default:
             unreachable(tradeProvider)
     }
@@ -58,6 +68,12 @@ export function resolveTradeProviderLink(tradeProvider: TradeProvider) {
             return 'https://uniswap.org/'
         case TradeProvider.ZRX:
             return 'https://0x.org/'
+        case TradeProvider.SUSHISWAP:
+            return 'https://sushiswapclassic.org/'
+        case TradeProvider.SASHIMISWAP:
+            return 'https://sashimi.cool/'
+        case TradeProvider.BALANCER:
+            return 'https://balancer.exchange/'
         default:
             unreachable(tradeProvider)
     }
@@ -69,6 +85,12 @@ export function resolveTradePairLink(tradeProvider: TradeProvider, address: stri
             return `https://info.uniswap.org/pair/${address}`
         case TradeProvider.ZRX:
             return ''
+        case TradeProvider.SUSHISWAP:
+            return `https://analytics.sushiswap.fi/pairs/${address}`
+        case TradeProvider.SASHIMISWAP:
+            return `https://info.sashimi.cool/pair/${address}`
+        case TradeProvider.BALANCER:
+            return `https://pools.balancer.exchange/#/pool/${address}/`
         default:
             unreachable(tradeProvider)
     }
@@ -84,12 +106,11 @@ export function resolveDaysName(days: number) {
 
 export function resolveUniswapWarningLevel(priceImpact: BigNumber) {
     const priceImpact_ = priceImpact.multipliedBy(BIPS_BASE)
-    if (priceImpact_.isGreaterThan(UNISWAP_PRICE_IMPACT_NON_EXPERT_BLOCKED)) return WarningLevel.BLOCKED
-    if (priceImpact_.isGreaterThan(UNISWAP_PRICE_IMPACT_WITHOUT_FEE_CONFIRM_MIN))
-        return WarningLevel.CONFIRMATION_REQUIRED
-    if (priceImpact_.isGreaterThan(UNISWAP_PRICE_IMPACT_HIGH)) return WarningLevel.HIGH
-    if (priceImpact_.isGreaterThan(UNISWAP_PRICE_IMPACT_MEDIUM)) return WarningLevel.MEDIUM
-    if (priceImpact_.isGreaterThan(UNISWAP_PRICE_IMPACT_LOW)) return WarningLevel.LOW
+    if (priceImpact_.isGreaterThan(PRICE_IMPACT_NON_EXPERT_BLOCKED)) return WarningLevel.BLOCKED
+    if (priceImpact_.isGreaterThan(PRICE_IMPACT_WITHOUT_FEE_CONFIRM_MIN)) return WarningLevel.CONFIRMATION_REQUIRED
+    if (priceImpact_.isGreaterThan(PRICE_IMPACT_HIGH)) return WarningLevel.HIGH
+    if (priceImpact_.isGreaterThan(PRICE_IMPACT_MEDIUM)) return WarningLevel.MEDIUM
+    if (priceImpact_.isGreaterThan(PRICE_IMPACT_LOW)) return WarningLevel.LOW
     return
 }
 

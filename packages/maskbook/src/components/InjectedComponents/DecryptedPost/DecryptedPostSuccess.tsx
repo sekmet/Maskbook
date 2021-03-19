@@ -14,7 +14,7 @@ import type { ProfileIdentifier } from '../../../database/type'
 import { wrapAuthorDifferentMessage } from './authorDifferentMessage'
 import { ErrorBoundary } from '../../shared/ErrorBoundary'
 
-export interface DecryptPostSuccessProps extends withClasses<KeysInferFromUseStyles<typeof useSuccessStyles>> {
+export interface DecryptPostSuccessProps extends withClasses<never> {
     data: { content: TypedMessage }
     requestAppendRecipients?(to: Profile[]): Promise<void>
     alreadySelectedPreviously: Profile[]
@@ -72,7 +72,7 @@ function SuccessDecryptionPlugin(props: PluginSuccessDecryptionComponentProps) {
     return (
         <>
             {[...PluginUI.values()].map((x) => (
-                <ErrorBoundary contain={`Plugin "${x.pluginName}"`} key={x.identifier}>
+                <ErrorBoundary subject={`Plugin "${x.pluginName}"`} key={x.identifier}>
                     <PluginSuccessDecryptionPostInspectorForEach pluginConfig={x} {...props} />
                 </ErrorBoundary>
             ))}

@@ -24,10 +24,10 @@ import { useQueryNavigatorPermission } from '../../utils/hooks/useQueryNavigator
 import Download from '@material-ui/icons/CloudDownload'
 import CloseIcon from '@material-ui/icons/Close'
 import OpenInBrowser from '@material-ui/icons/OpenInBrowser'
-import { formatDateTime } from '../../plugins/FileService/utils'
+import { formatDateTime } from '../../utils/date'
 import { saveAsFileFromUrl } from '../../extension/background-script/HelperService'
 
-export interface AutoPasteFailedDialogProps extends withClasses<KeysInferFromUseStyles<typeof useStyles>> {
+export interface AutoPasteFailedDialogProps extends withClasses<never> {
     onClose: () => void
     data: MaskMessages['autoPasteFailed']
 }

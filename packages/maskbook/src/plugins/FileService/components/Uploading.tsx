@@ -41,6 +41,7 @@ interface RouteState {
     type: string
     block: Uint8Array
     checksum: string
+    useCDN: boolean
 }
 
 export const Uploading: React.FC = () => {
@@ -76,11 +77,13 @@ export const Uploading: React.FC = () => {
                 txId: payloadTxID,
                 type: state.type,
                 key: state.key,
+                useCDN: state.useCDN,
             }),
             300000, // ≈ 5 minutes
         )
         const item: FileInfo = {
-            type: 'arweave',
+            type: 'file',
+            provider: 'arweave',
             id: state.checksum,
 
             name: state.name,

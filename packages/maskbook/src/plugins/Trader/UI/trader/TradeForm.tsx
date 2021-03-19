@@ -2,26 +2,30 @@ import { useCallback, useMemo } from 'react'
 import classNames from 'classnames'
 import { noop } from 'lodash-es'
 import BigNumber from 'bignumber.js'
-import { makeStyles, createStyles, Typography, Grid, IconButton } from '@material-ui/core'
+import { makeStyles, createStyles, Typography, Grid, IconButton, Tooltip } from '@material-ui/core'
 import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward'
 import TuneIcon from '@material-ui/icons/Tune'
+import RefreshOutlined from '@material-ui/icons/RefreshOutlined'
 import { useStylesExtends } from '../../../../components/custom-ui-helper'
 import ActionButton from '../../../../extension/options-page/DashboardComponents/ActionButton'
 import { useAccount } from '../../../../web3/hooks/useAccount'
 import { useRemoteControlledDialog } from '../../../../utils/hooks/useRemoteControlledDialog'
 import { WalletMessages } from '../../../Wallet/messages'
-import { ApproveState } from '../../../../web3/hooks/useERC20TokenApproveCallback'
-import { TradeStrategy, TokenPanelType, TradeComputed } from '../../types'
+import { ApproveStateType } from '../../../../web3/hooks/useERC20TokenApproveCallback'
+import { TradeStrategy, TokenPanelType, TradeComputed, WarningLevel, TradeProvider } from '../../types'
 import { TokenAmountPanel } from '../../../../web3/UI/TokenAmountPanel'
 import { useI18N } from '../../../../utils/i18n-next-ui'
 import { useChainIdValid } from '../../../../web3/hooks/useChainState'
-import type { ERC20TokenDetailed, EtherTokenDetailed } from '../../../../web3/types'
+import { ERC20TokenDetailed, EthereumTokenType, EtherTokenDetailed } from '../../../../web3/types'
 import { currentSlippageTolerance } from '../../settings'
 import { PluginTraderMessages } from '../../messages'
 import { toBips } from '../../helpers'
 import { formatBalance, formatPercentage } from '../../../Wallet/formatter'
 import { resolveUniswapWarningLevel } from '../../pipes'
-import { WarningLevel } from '../../types/uniswap'
+import { EthereumWalletConnectedBoundary } from '../../../../web3/UI/EthereumWalletConnectedBoundary'
+import { EthereumERC20TokenApprovedBoundary } from '../../../../web3/UI/EthereumERC20TokenApprovedBoundary'
+import { useTradeApproveComputed } from '../../trader/useTradeApproveComputed'
+import { useTradeContext } from '../../trader/useTradeContext'
 
 const useStyles = makeStyles((theme) => {
     return createStyles({
@@ -38,9 +42,17 @@ const useStyles = makeStyles((theme) => {
             marginBottom: theme.spacing(1),
         },
         status: {
+            marginTop: theme.spacing(0.5),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+        },
+        label: {
+            flex: 1,
+            textAlign: 'left',
+        },
+        icon: {
+            marginLeft: theme.spacing(0.5),
         },
         reverseIcon: {
             cursor: 'pointer',
@@ -60,10 +72,10 @@ const useStyles = makeStyles((theme) => {
     })
 })
 
-export interface TradeFormProps extends withClasses<KeysInferFromUseStyles<typeof useStyles>> {
-    approveState: ApproveState
-    strategy: TradeStrategy
+export interface TradeFormProps extends withClasses<never> {
     trade: TradeComputed | null
+    strategy: TradeStrategy
+    provider: TradeProvider
     loading: boolean
     inputToken?: EtherTokenDetailed | ERC20TokenDetailed
     outputToken?: EtherTokenDetailed | ERC20TokenDetailed
@@ -74,17 +86,16 @@ export interface TradeFormProps extends withClasses<KeysInferFromUseStyles<typeo
     onInputAmountChange: (amount: string) => void
     onOutputAmountChange: (amount: string) => void
     onReverseClick?: () => void
+    onRefreshClick?: () => void
     onTokenChipClick?: (token: TokenPanelType) => void
-    onApprove: () => void
-    onExactApprove: () => void
     onSwap: () => void
 }
 
 export function TradeForm(props: TradeFormProps) {
     const { t } = useI18N()
     const {
-        approveState,
         trade,
+        provider,
         loading,
         strategy,
         inputToken,
@@ -96,9 +107,8 @@ export function TradeForm(props: TradeFormProps) {
         onInputAmountChange,
         onOutputAmountChange,
         onReverseClick = noop,
+        onRefreshClick = noop,
         onTokenChipClick = noop,
-        onApprove,
-        onExactApprove,
         onSwap,
     } = props
     const classes = useStylesExtends(useStyles(), props)
@@ -106,6 +116,10 @@ export function TradeForm(props: TradeFormProps) {
     //#region context
     const account = useAccount()
     const chainIdValid = useChainIdValid()
+    //#endregion
+
+    //#region approve token
+    const { approveToken, approveAmount, approveAddress } = useTradeApproveComputed(trade, provider, inputToken)
     //#endregion
 
     //#region token balance
@@ -199,10 +213,10 @@ export function TradeForm(props: TradeFormProps) {
     //#endregion
 
     //#region UI logic
-    const approveRequired = approveState === ApproveState.NOT_APPROVED || approveState === ApproveState.PENDING
 
     // validate form return a message if an error exists
     const validationMessage = useMemo(() => {
+        if (!trade) return t('plugin_trader_error_insufficient_lp')
         if (inputTokenTradeAmount.isZero() && outputTokenTradeAmount.isZero())
             return t('plugin_trader_error_amount_absence')
         if (!inputToken || !outputToken) return t('plugin_trader_error_amount_absence')
@@ -211,7 +225,6 @@ export function TradeForm(props: TradeFormProps) {
                 symbol: inputToken?.symbol,
             })
         if (loading) return t('plugin_trader_finding_price')
-        if (!trade) return t('plugin_trader_error_insufficient_lp')
         if (resolveUniswapWarningLevel(trade.priceImpact) === WarningLevel.BLOCKED)
             return t('plugin_trader_error_price_impact_too_high')
         return ''
@@ -235,83 +248,37 @@ export function TradeForm(props: TradeFormProps) {
             ))}
             <div className={classes.section}>
                 <div className={classes.status}>
-                    <Typography color="textSecondary" variant="body2">
+                    <Typography className={classes.label} color="textSecondary" variant="body2">
                         Slippage Tolerance: {formatPercentage(toBips(currentSlippageTolerance.value))}
                     </Typography>
-                    <IconButton size="small" onClick={() => setSwapSettingsDialogOpen({ open: true })}>
+                    <IconButton className={classes.icon} size="small" onClick={onRefreshClick}>
+                        <RefreshOutlined fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                        className={classes.icon}
+                        size="small"
+                        onClick={() => setSwapSettingsDialogOpen({ open: true })}>
                         <TuneIcon fontSize="small" />
                     </IconButton>
                 </div>
             </div>
             <div className={classes.section}>
-                <Grid container direction="row" justifyContent="center" alignItems="center" spacing={2}>
-                    {approveRequired && !loading ? (
-                        approveState === ApproveState.PENDING ? (
-                            <Grid item xs={12}>
-                                <ActionButton
-                                    className={classes.button}
-                                    fullWidth
-                                    variant="contained"
-                                    size="large"
-                                    disabled={approveState === ApproveState.PENDING}>
-                                    {`Unlocking ${inputToken?.symbol ?? 'Token'}…`}
-                                </ActionButton>
-                            </Grid>
-                        ) : (
-                            <>
-                                <Grid item xs={6}>
-                                    <ActionButton
-                                        className={classes.button}
-                                        fullWidth
-                                        variant="contained"
-                                        size="large"
-                                        onClick={onExactApprove}>
-                                        {approveState === ApproveState.NOT_APPROVED
-                                            ? `Unlock ${formatBalance(
-                                                  inputTokenTradeAmount,
-                                                  inputToken?.decimals ?? 0,
-                                                  2,
-                                              )} ${inputToken?.symbol ?? 'Token'}`
-                                            : ''}
-                                    </ActionButton>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <ActionButton
-                                        className={classes.button}
-                                        fullWidth
-                                        variant="contained"
-                                        size="large"
-                                        onClick={onApprove}>
-                                        {approveState === ApproveState.NOT_APPROVED ? `Infinite Unlock` : ''}
-                                    </ActionButton>
-                                </Grid>
-                            </>
-                        )
-                    ) : (
-                        <Grid item xs={12}>
-                            {!account || !chainIdValid ? (
-                                <ActionButton
-                                    className={classes.button}
-                                    fullWidth
-                                    variant="contained"
-                                    size="large"
-                                    onClick={onConnect}>
-                                    {t('plugin_wallet_connect_a_wallet')}
-                                </ActionButton>
-                            ) : (
-                                <ActionButton
-                                    className={classes.button}
-                                    fullWidth
-                                    variant="contained"
-                                    size="large"
-                                    disabled={loading || !!validationMessage || approveRequired}
-                                    onClick={onSwap}>
-                                    {validationMessage || t('plugin_trader_swap')}
-                                </ActionButton>
-                            )}
-                        </Grid>
-                    )}
-                </Grid>
+                <EthereumWalletConnectedBoundary>
+                    <EthereumERC20TokenApprovedBoundary
+                        amount={approveAmount.toFixed()}
+                        token={approveToken?.type === EthereumTokenType.ERC20 ? approveToken : undefined}
+                        spender={approveAddress}>
+                        <ActionButton
+                            className={classes.button}
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            disabled={loading || !!validationMessage}
+                            onClick={onSwap}>
+                            {validationMessage || t('plugin_trader_swap')}
+                        </ActionButton>
+                    </EthereumERC20TokenApprovedBoundary>
+                </EthereumWalletConnectedBoundary>
             </div>
         </div>
     )

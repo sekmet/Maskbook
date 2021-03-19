@@ -5,14 +5,7 @@
     "editor.codeActionsOnSave": {
         "source.fixAll": true
     },
-    "i18n-ally.sourceLanguage": "en",
-    "i18n-ally.displayLanguage": "en",
-    "i18n-ally.localesPaths": "packages/maskbook/src/_locales",
-    "i18n-ally.sortKeys": true,
-    "i18n-ally.keystyle": "flat",
-    "i18n-ally.annotations": true,
-    "i18n-ally.indent": 4,
-    "i18n-ally.enabledParsers": ["json"],
+    "editor.tabSize": 4,
     "json.schemas": [
         {
             "fileMatch": ["/packages/maskbook/src/manifest.json"],
@@ -27,5 +20,26 @@
             "url": "/.vscode/schema/locale.json"
         }
     ],
-    "cSpell.words": ["Reificated"]
+    "cSpell.words": ["Reificated"],
+    "markdownlint.config": {
+        "no-inline-html": false
+    },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

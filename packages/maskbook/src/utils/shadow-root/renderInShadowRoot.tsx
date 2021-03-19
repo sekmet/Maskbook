@@ -1,18 +1,24 @@
 import { create as createJSS, SheetsRegistry as JSSSheetsRegistry } from 'jss'
-import { jssPreset, StylesProvider as JSSStylesProvider, ThemeProvider } from '@material-ui/core/styles'
+import {
+    jssPreset,
+    StylesProvider as JSSStylesProvider,
+    ThemeProvider,
+    createGenerateClassName,
+} from '@material-ui/core/styles'
 import { CacheProvider as EmotionCacheProvider } from '@emotion/react'
 import createEmotionCache, { EmotionCache } from '@emotion/cache'
 import ReactDOM from 'react-dom'
-import { useMemo, StrictMode } from 'react'
+import { useMemo, useRef } from 'react'
 import type {} from 'react/experimental'
 import type {} from 'react-dom/experimental'
-import { getActivatedUI } from '../../social-network/ui'
-import { I18nextProvider } from 'react-i18next'
-import i18nNextInstance from '../i18n-next'
+import { activatedSocialNetworkUI } from '../../social-network'
 import { portalShadowRoot } from './ShadowRootPortal'
 import { useSubscription } from 'use-subscription'
-import { SnackbarProvider } from 'notistack'
 import { ErrorBoundary } from '../../components/shared/ErrorBoundary'
+import { MaskbookUIRoot } from '../../UIRoot'
+import { applyMaskColorVars } from '@dimensiondev/maskbook-theme'
+import { appearanceSettings } from '../../settings/settings'
+import { getMaskbookTheme } from '../theme'
 
 const captureEvents: (keyof HTMLElementEventMap)[] = [
     'paste',
@@ -45,6 +51,7 @@ export function renderInShadowRoot(
         shadow(): ShadowRoot
         concurrent?: boolean
         rootProps?: React.DetailedHTMLProps<React.HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>
+        signal?: AbortSignal
     },
 ) {
     let rendered = false
@@ -67,27 +74,39 @@ export function renderInShadowRoot(
             )
         }
     })
-    return () => rendered && unmount()
+    config.signal?.addEventListener('abort', () => unmount())
+    return (): void => void (rendered && unmount())
 }
 
+const seen = new WeakMap<HTMLElement, ReactDOM.Root>()
 function mount(host: ShadowRoot, _: JSX.Element, keyBy = 'app', concurrent?: boolean) {
-    const container =
-        host.querySelector<HTMLElement>(`main.${keyBy}`) ||
-        (() => {
-            const dom = host.appendChild(document.createElement('main'))
-            dom.className = keyBy
-            return dom
-        })()
+    const container = getContainer()
+    if (container.childElementCount && process.env.NODE_ENV === 'development') {
+        console.warn(
+            `The node you want to mount on`,
+            container,
+            `already has children in it. It is highly like a mistake. Did you forget to set "keyBy" correctly?`,
+        )
+    }
     for (const each of captureEvents) {
         host.addEventListener(each, (e) => e.stopPropagation())
     }
     if (concurrent) {
-        const root = ReactDOM.unstable_createRoot(container)
+        const root = seen.get(container) || ReactDOM.unstable_createRoot(container)
+        seen.set(container, root)
         root.render(_)
         return () => root.unmount()
     } else {
         ReactDOM.render(_, container)
         return () => ReactDOM.unmountComponentAtNode(container)
+    }
+
+    function getContainer() {
+        const root = host.querySelector<HTMLElement>(`main.${keyBy}`)
+        if (root) return root
+        const dom = host.appendChild(document.createElement('main'))
+        dom.className = keyBy
+        return dom
     }
 }
 try {
@@ -111,12 +130,12 @@ class Informative {
         this.callback.add(cb)
         return () => void this.callback.delete(cb)
     }
+    private pendingInform = false
     inform() {
-        // ? Callback must be async or React will complain:
-        // Warning: Cannot update a component from inside the function body of a different component.
-        setTimeout(() => {
-            // TODO: batch update ? aggregating multiple inform request to one callback is possible
-            for (const cb of this.callback) cb()
+        if (this.pendingInform) return
+        requestAnimationFrame(() => {
+            this.pendingInform = false
+            this.callback.forEach((x) => x())
         })
     }
 }
@@ -184,7 +203,7 @@ export function useSheetsRegistryStyles(_current: Node | null) {
             subscribe: (callback: () => void) => registry?.reg.addListener(callback) ?? (() => 0),
         }
     }, [_current])
-    return useSubscription(jssSubscription) + '\n' + useSubscription(emotionSubscription)
+    return [useSubscription(emotionSubscription), useSubscription(jssSubscription)].filter(Boolean).join('\n')
 }
 const initOnceMap = new WeakMap<ShadowRoot, unknown>()
 function initOnce<T>(keyBy: ShadowRoot, init: () => T): T {
@@ -193,11 +212,26 @@ function initOnce<T>(keyBy: ShadowRoot, init: () => T): T {
     initOnceMap.set(keyBy, val)
     return val
 }
+function createElement(key: keyof HTMLElementTagNameMap, kind: string) {
+    const e = document.createElement(key)
+    e.setAttribute('data-' + kind, 'true')
+    return e
+}
 function ShadowRootStyleProvider({ shadow, ...props }: React.PropsWithChildren<{ shadow: ShadowRoot }>) {
-    const { jss, JSSRegistry, JSSSheetsManager, emotionCache } = initOnce(shadow, () => {
-        const head = shadow.appendChild(document.createElement('head'))
-        const JSSInsertionPoint = head.appendChild(document.createElement('div'))
-        const EmotionInsertionPoint = head.appendChild(document.createElement('div'))
+    const { jss, JSSRegistry, JSSSheetsManager, emotionCache, generateClassName } = initOnce(shadow, () => {
+        const head = shadow.appendChild(createElement('head', 'css-container'))
+        const themeCSSVars = head.appendChild(document.createElement('style'))
+        function updateThemeVars() {
+            applyMaskColorVars(themeCSSVars, getMaskbookTheme().palette.mode)
+        }
+        updateThemeVars()
+        appearanceSettings.addListener(updateThemeVars)
+        matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeVars)
+        const EmotionInsertionPoint = head.appendChild(createElement('div', 'emotion-area'))
+        const JSSInsertionContainer = head.appendChild(createElement('div', 'jss-area'))
+        const JSSInsertionPoint = JSSInsertionContainer.appendChild(createElement('div', 'jss-insert-point'))
+        // emotion doesn't allow numbers appears in the key
+        const instanceID = Math.random().toString(36).slice(2).replace(/[0-9]/g, 'x')
         // JSS
         const jss = createJSS({
             ...jssPreset(),
@@ -209,19 +243,20 @@ function ShadowRootStyleProvider({ shadow, ...props }: React.PropsWithChildren<{
         // Emotion
         const emotionCache = createEmotionCache({
             container: EmotionInsertionPoint,
-            // emotion doesn't allow numbers appears in the key
-            key: 'emo-' + Math.random().toString(36).slice(2).replace(/[0-9]/g, 'x'),
+            key: 'emo-' + instanceID,
             speedy: false,
             // TODO: support speedy mode which use insertRule https://github.com/emotion-js/emotion/blob/master/packages/sheet/src/index.js
         })
         emotionRegistryMap.set(shadow, new EmotionInformativeSheetsRegistry(emotionCache))
-        return { jss, JSSRegistry, JSSSheetsManager, emotionCache }
+        const generateClassName = createGenerateClassName({ seed: instanceID })
+        return { jss, JSSRegistry, JSSSheetsManager, emotionCache, generateClassName }
     })
     return (
         // ! sheetsManager: Material-ui uses this to detect if the style has been rendered
         // ! sheetsRegistry: We use this to get styles as a whole string
         <EmotionCacheProvider value={emotionCache}>
             <JSSStylesProvider
+                generateClassName={generateClassName}
                 sheetsRegistry={JSSRegistry}
                 jss={jss}
                 sheetsManager={JSSSheetsManager}
@@ -234,15 +269,11 @@ function ShadowRootStyleProvider({ shadow, ...props }: React.PropsWithChildren<{
 type MaskbookProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>
 
 function Maskbook(_props: MaskbookProps) {
-    return (
-        <ThemeProvider theme={getActivatedUI().useTheme()}>
-            <I18nextProvider i18n={i18nNextInstance}>
-                <SnackbarProvider maxSnack={30} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-                    <StrictMode>
-                        <span {..._props} />
-                    </StrictMode>
-                </SnackbarProvider>
-            </I18nextProvider>
-        </ThemeProvider>
+    const useTheme = useRef(activatedSocialNetworkUI.customization.useTheme).current
+    const theme = useTheme?.() || getMaskbookTheme()
+    return MaskbookUIRoot(
+        <ThemeProvider theme={theme}>
+            <span {..._props} />
+        </ThemeProvider>,
     )
 }

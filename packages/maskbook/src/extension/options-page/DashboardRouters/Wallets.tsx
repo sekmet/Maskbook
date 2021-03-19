@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useEffect, createContext } from 'react'
+import type { AssetDetailed, ERC20TokenDetailed } from '../../../web3/types'
 import { Button } from '@material-ui/core'
 import { makeStyles, createStyles, ThemeProvider } from '@material-ui/core/styles'
 import AddIcon from '@material-ui/icons/Add'
@@ -19,10 +19,11 @@ import useQueryParams from '../../../utils/hooks/useQueryParams'
 import { Flags } from '../../../utils/flags'
 import { useWallet } from '../../../plugins/Wallet/hooks/useWallet'
 import { useTrustedERC20TokensFromDB } from '../../../plugins/Wallet/hooks/useERC20Token'
-import { useAssetsDetailedCallback } from '../../../web3/hooks/useAssetsDetailedCallback'
+import { useAssetsDetailed } from '../../../web3/hooks/useAssetsDetailed'
 import { WalletContent } from '../DashboardComponents/WalletContent'
 import { EthereumStatusBar } from '../../../web3/UI/EthereumStatusBar'
 import { extendsTheme } from '../../../utils/theme'
+import { useStableTokensDebank } from '../../../web3/hooks/useStableTokensDebank'
 
 //#region theme
 const walletsTheme = extendsTheme((theme) => ({
@@ -84,11 +85,18 @@ const useStyles = makeStyles((theme) =>
     }),
 )
 
+export const DashboardWalletsContext = createContext<{
+    stableTokens: ERC20TokenDetailed[]
+    detailedTokens: AssetDetailed[]
+    detailedTokensError: Error | undefined
+    detailedTokensLoading: boolean
+    detailedTokensRetry: () => void
+}>(null!)
+
 export default function DashboardWalletsRouter() {
-    const classes = useStyles()
     const { t } = useI18N()
-    const history = useHistory()
-    const { create, error, rpid } = useQueryParams(['create', 'error', 'rpid'])
+    const classes = useStyles()
+    const { create, error } = useQueryParams(['create', 'error', 'rpid'])
 
     const [walletCreate, openWalletCreate] = useModal(DashboardWalletCreateDialog)
     const [walletError, openWalletError] = useModal(DashboardWalletErrorDialog)
@@ -98,7 +106,13 @@ export default function DashboardWalletsRouter() {
 
     const selectedWallet = useWallet()
     const tokens = useTrustedERC20TokensFromDB()
-    const detailedTokens = useAssetsDetailedCallback(tokens)
+    const {
+        value: detailedTokens,
+        error: detailedTokensError,
+        loading: detailedTokensLoading,
+        retry: detailedTokensRetry,
+    } = useAssetsDetailed(tokens)
+    const { value: stableTokens = [] } = useStableTokensDebank()
 
     // show create dialog
     useEffect(() => {
@@ -146,36 +160,37 @@ export default function DashboardWalletsRouter() {
     //#endregion
 
     return (
-        <DashboardRouterContainer
-            empty={!selectedWallet}
-            title={t('my_wallets')}
-            actions={[
-                <EthereumStatusBar BoxProps={{ sx: { justifyContent: 'flex-end' } }} />,
-                <Button
-                    variant="contained"
-                    onClick={openWalletCreate}
-                    endIcon={<AddCircleIcon />}
-                    data-testid="create_button">
-                    {t('plugin_wallet_on_create')}
-                </Button>,
-            ]}
-            floatingButtons={floatingButtons}>
-            <ThemeProvider theme={walletsTheme}>
-                <div className={classes.root}>
-                    <div className={classes.content}>
-                        <div className={classes.wrapper}>
-                            {selectedWallet ? (
-                                <WalletContent wallet={selectedWallet} detailedTokens={detailedTokens} />
-                            ) : null}
+        <DashboardWalletsContext.Provider
+            value={{ detailedTokens, stableTokens, detailedTokensLoading, detailedTokensError, detailedTokensRetry }}>
+            <DashboardRouterContainer
+                empty={!selectedWallet}
+                title={t('my_wallets')}
+                actions={[
+                    <EthereumStatusBar disableEther BoxProps={{ sx: { justifyContent: 'flex-end' } }} />,
+                    <Button
+                        variant="contained"
+                        onClick={openWalletCreate}
+                        endIcon={<AddCircleIcon />}
+                        data-testid="create_button">
+                        {t('plugin_wallet_on_create')}
+                    </Button>,
+                ]}
+                floatingButtons={floatingButtons}>
+                <ThemeProvider theme={walletsTheme}>
+                    <div className={classes.root}>
+                        <div className={classes.content}>
+                            <div className={classes.wrapper}>
+                                {selectedWallet ? <WalletContent wallet={selectedWallet} /> : null}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </ThemeProvider>
-            {addToken}
-            {walletHistory}
-            {walletCreate}
-            {walletError}
-            {walletRedPacketDetail}
-        </DashboardRouterContainer>
+                </ThemeProvider>
+                {addToken}
+                {walletHistory}
+                {walletCreate}
+                {walletError}
+                {walletRedPacketDetail}
+            </DashboardRouterContainer>
+        </DashboardWalletsContext.Provider>
     )
 }

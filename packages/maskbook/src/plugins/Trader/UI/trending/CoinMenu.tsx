@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { makeStyles, createStyles, Typography, MenuItem } from '@material-ui/core'
-import { InjectedMenu } from '../../../../components/shared/injectedMenu'
+import { ShadowRootMenu } from '../../../../utils/shadow-root/ShadowRootComponents'
 import type { Coin } from '../../types'
 
 const useStyles = makeStyles((theme) =>
@@ -41,7 +41,11 @@ export function CoinMenu(props: CoinMenuProps) {
     return (
         <>
             <div onClick={onOpen}>{children}</div>
-            <InjectedMenu open={!!anchorEl} onClose={onClose} anchorEl={anchorEl}>
+            <ShadowRootMenu
+                open={!!anchorEl}
+                onClose={onClose}
+                anchorEl={anchorEl}
+                PaperProps={{ style: { maxHeight: 192 } }}>
                 {options.map((x, i) => (
                     <MenuItem selected={selectedIndex === i} key={x.value} onClick={() => onSelect(x)}>
                         <Typography>
@@ -50,7 +54,7 @@ export function CoinMenu(props: CoinMenuProps) {
                         </Typography>
                     </MenuItem>
                 ))}
-            </InjectedMenu>
+            </ShadowRootMenu>
         </>
     )
 }

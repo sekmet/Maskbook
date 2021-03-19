@@ -9,12 +9,17 @@ import {
     IconButton,
     makeStyles,
     Typography,
+    useTheme,
+    Dialog,
+    useMediaQuery,
 } from '@material-ui/core'
 import { Children, cloneElement } from 'react'
 import { useI18N } from '../../utils/i18n-next-ui'
-import ShadowRootDialog from '../../utils/shadow-root/ShadowRootDialog'
-import { getCustomUIOverwrite, mergeClasses, useStylesExtends } from '../custom-ui-helper'
+import { usePortalShadowRoot } from '../../utils/shadow-root/usePortalShadowRoot'
+import { mergeClasses, useStylesExtends } from '../custom-ui-helper'
 import { DialogDismissIconUI } from '../InjectedComponents/DialogDismissIcon'
+import { ErrorBoundary } from '@dimensiondev/maskbook-theme'
+import { activatedSocialNetworkUI } from '../../social-network'
 
 const useStyles = makeStyles((theme) =>
     createStyles({
@@ -43,10 +48,11 @@ export interface InjectedDialogProps extends withClasses<InjectedDialogClassKey>
     title?: React.ReactChild
     DialogProps?: Partial<DialogProps>
     disableBackdropClick?: boolean
+    disableArrowBack?: boolean
 }
 export function InjectedDialog(props: InjectedDialogProps) {
     const classes = useStyles()
-    const overwrite = getCustomUIOverwrite()
+    const overwrite = activatedSocialNetworkUI.customization.componentOverwrite || {}
     props = overwrite.InjectedDialog?.props?.(props) ?? props
     const {
         dialogActions,
@@ -57,13 +63,16 @@ export function InjectedDialog(props: InjectedDialogProps) {
         dialogBackdropRoot,
         ...dialogClasses
     } = useStylesExtends(classes, props, overwrite.InjectedDialog?.classes)
+    const fullScreen = useMediaQuery(useTheme().breakpoints.down('xs'))
 
     const { t } = useI18N()
     const actions = CopyElementWithNewProps(props.children, DialogActions, { root: dialogActions })
     const content = CopyElementWithNewProps(props.children, DialogContent, { root: dialogContent })
 
-    return (
-        <ShadowRootDialog
+    return usePortalShadowRoot((container) => (
+        <Dialog
+            container={container}
+            fullScreen={fullScreen}
             classes={dialogClasses}
             open={props.open}
             scroll="paper"
@@ -82,23 +91,25 @@ export function InjectedDialog(props: InjectedDialogProps) {
                 },
             }}
             {...props.DialogProps}>
-            {props.title ? (
-                <DialogTitle classes={{ root: dialogTitle }}>
-                    <IconButton
-                        classes={{ root: dialogCloseButton }}
-                        aria-label={t('post_dialog__dismiss_aria')}
-                        onClick={props.onClose}>
-                        <DialogDismissIconUI />
-                    </IconButton>
-                    <Typography className={dialogTitleTypography} display="inline" variant="inherit">
-                        {props.title}
-                    </Typography>
-                </DialogTitle>
-            ) : null}
-            {content}
-            {actions}
-        </ShadowRootDialog>
-    )
+            <ErrorBoundary>
+                {props.title ? (
+                    <DialogTitle classes={{ root: dialogTitle }}>
+                        <IconButton
+                            classes={{ root: dialogCloseButton }}
+                            aria-label={t('post_dialog__dismiss_aria')}
+                            onClick={props.onClose}>
+                            <DialogDismissIconUI disableArrowBack={props.disableArrowBack} />
+                        </IconButton>
+                        <Typography className={dialogTitleTypography} display="inline" variant="inherit">
+                            {props.title}
+                        </Typography>
+                    </DialogTitle>
+                ) : null}
+                {content}
+                {actions}
+            </ErrorBoundary>
+        </Dialog>
+    ))
 }
 function CopyElementWithNewProps<T>(
     children: React.ReactNode,

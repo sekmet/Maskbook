@@ -6,7 +6,6 @@ import Services from '../../extension/service'
 import { ProfileIdentifier } from '../../database/type'
 import type { Profile } from '../../database'
 import { useCurrentIdentity, useFriendsList } from '../DataSource/useActivatedUI'
-import { getActivatedUI } from '../../social-network/ui'
 import { useValueRef } from '../../utils/hooks/useValueRef'
 import { debugModeSetting } from '../../settings/settings'
 import { DebugList } from '../DebugModeUI/DebugList'
@@ -15,6 +14,8 @@ import type { PluginConfig } from '../../plugins/types'
 import { PluginUI } from '../../plugins/PluginUI'
 import { usePostInfoDetails, usePostInfo } from '../DataSource/usePostInfo'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
+import type { PayloadAlpha40_Or_Alpha39, PayloadAlpha38 } from '../../utils/type-transform/Payload'
+import { decodePublicKeyUI } from '../../social-network/utils/text-payload-ui'
 
 export interface PostInspectorProps {
     onDecrypted(post: TypedMessage, raw: string): void
@@ -29,12 +30,13 @@ export function PostInspector(props: PostInspectorProps) {
     const postContent = usePostInfoDetails('postContent')
     const encryptedPost = usePostInfoDetails('postPayload')
     const postId = usePostInfoDetails('postIdentifier')
+    const decryptedPayloadForImage = usePostInfoDetails('decryptedPayloadForImage')
     const postImages = usePostInfoDetails('postMetadataImages')
     const isDebugging = useValueRef(debugModeSetting)
     const whoAmI = useCurrentIdentity()
     const friends = useFriendsList()
     const [alreadySelectedPreviously, setAlreadySelectedPreviously] = useState<Profile[]>([])
-    const provePost = useMemo(() => getActivatedUI().publicKeyDecoder(postContent), [postContent])
+    const provePost = useMemo(() => decodePublicKeyUI(postContent), [postContent])
 
     const { value: sharedListOfPost } = useAsync(async () => {
         if (!whoAmI || !whoAmI.identifier.equals(postBy) || !encryptedPost.ok) return []
@@ -69,9 +71,12 @@ export function PostInspector(props: PostInspectorProps) {
                 onDecrypted={props.onDecrypted}
                 requestAppendRecipients={
                     // So should not create new data on version -40
-                    encryptedPost.ok && encryptedPost.val.version !== -40
+                    (encryptedPost.ok && encryptedPost.val.version !== -40) || decryptedPayloadForImage
                         ? async (profile) => {
-                              const { val } = encryptedPost
+                              const val = (postImages ? decryptedPayloadForImage : encryptedPost.val) as
+                                  | PayloadAlpha40_Or_Alpha39
+                                  | PayloadAlpha38
+
                               const { iv, version } = val
                               const ownersAESKeyEncrypted =
                                   val.version === -38 ? val.AESKeyEncrypted : val.ownersAESKeyEncrypted
@@ -117,7 +122,7 @@ function PluginPostInspector() {
     return (
         <>
             {[...PluginUI.values()].map((x) => (
-                <ErrorBoundary contain={`Plugin "${x.pluginName}"`} key={x.identifier}>
+                <ErrorBoundary subject={`Plugin "${x.pluginName}"`} key={x.identifier}>
                     <PluginPostInspectorForEach config={x} />
                 </ErrorBoundary>
             ))}
